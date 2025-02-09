@@ -7,49 +7,43 @@ from direct.task import Task
 import math
 
 from direct.showbase.DirectObject import DirectObject
-from QPanda3D.Panda3DWorld import Panda3DWorld
+from QPanda3D.Panda3DWorld import Panda3DWorld  # Make sure this returns a proper ShowBase-derived object
 
 class GizmoDemo(DirectObject):
     def __init__(self, world: Panda3DWorld):
         super().__init__()
         
         self.world = world
-        
+        self.cam = world.cam
         
         self.move_speed = 1
         
-        
-        # Disable default camera controls.
-        world.disableMouse()
-        world.camera.setPos(10, -20, 10)
-        world.camera.lookAt(0, 0, 0)
+        # Use base.camLens for extruding mouse coordinates.
+        self.camLens = base.camLens
+
+        # Set up the camera.
+        self.world.camera.setPos(10, -20, 10)
+        self.world.camera.lookAt(0, 0, 0)
         
         # Create a parent node for the gizmo.
         self.gizmo_root = render.attachNewNode("GizmoRoot")
         self.gizmo_root.setPos(0, 0, 0)
         
-        # Load the gizmo model and attach three arrows.
-        # We assume the model (gizmos.obj) is oriented along +Y by default.
-        #
-        # X-axis arrow (red): rotate to point along +X.
+        # Load gizmo models for the three axes.
         self.gizmo_x = loader.loadModel("models/gizmos.obj")
         self.gizmo_x.reparentTo(self.gizmo_root)
         self.gizmo_x.setColor(1, 0, 0, 1)
-        self.gizmo_x.setHpr(90, 0, 0)  # +Y -> +X
+        self.gizmo_x.setHpr(90, 0, 0)  # Point along +X
         
-        # Y-axis arrow (green): default orientation (points along +Y).
         self.gizmo_y = loader.loadModel("models/gizmos.obj")
         self.gizmo_y.reparentTo(self.gizmo_root)
-        self.gizmo_y.setColor(0, 1, 0, 1)
+        self.gizmo_y.setColor(0, 1, 0, 1)  # Points along +Y
         
-        # Z-axis arrow (blue): rotate so it points along +Z.
-        # (Changing pitch from -90 to +90 flips it so it points upward.)
         self.gizmo_z = loader.loadModel("models/gizmos.obj")
         self.gizmo_z.reparentTo(self.gizmo_root)
         self.gizmo_z.setColor(0, 0, 1, 1)
-        self.gizmo_z.setHpr(0, 90, 0)
+        self.gizmo_z.setHpr(0, 90, 0)  # Point along +Z
         
-        # Keep a dictionary for convenience.
         self.gizmos = {
             "x": self.gizmo_x,
             "y": self.gizmo_y,
@@ -57,7 +51,6 @@ class GizmoDemo(DirectObject):
         }
         
         # --- Collision Setup for Picking ---
-        # Attach a collision sphere to each arrow.
         self.pickerMask = BitMask32.bit(1)
         for axis, arrow in self.gizmos.items():
             # Compute tight bounds and create a collision sphere.
@@ -76,7 +69,8 @@ class GizmoDemo(DirectObject):
         self.pq = CollisionHandlerQueue()
         self.pickerNode = CollisionNode('mouseRay')
         self.pickerNode.setFromCollideMask(self.pickerMask)
-        self.pickerNP = camera.attachNewNode(self.pickerNode)
+        # Attach the picker node to render so that the ray is global.
+        self.pickerNP = render.attachNewNode(self.pickerNode)
         self.pickerRay = CollisionRay()
         self.pickerNode.addSolid(self.pickerRay)
         self.picker.addCollider(self.pickerNP, self.pq)
@@ -87,9 +81,9 @@ class GizmoDemo(DirectObject):
         self.initialDragParam = None   # float: parameter along the drag line at mouse down
         
         # Accept mouse events.
-        world.accept("mouse1", self.onMouseDown)
-        world.accept("mouse1-up", self.onMouseUp)
-        world.taskMgr.add(self.mouseTask, "mouseTask")
+        self.accept("mouse1", self.onMouseDown)
+        self.accept("mouse1-up", self.onMouseUp)
+        self.world.taskMgr.add(self.mouseTask, "mouseTask")
         
         # (Optional) Load an environment for reference.
         self.scene = loader.loadModel("models/environment")
@@ -123,14 +117,7 @@ class GizmoDemo(DirectObject):
         self.accept("space", self.set_key, ["space", True])
         self.accept("space-up", self.set_key, ["space", False])
         
-        # Add the camera update task.
-        world.taskMgr.add(self.update_camera, "update_camera")
         
-        if hasattr(world.win, "movePointer"):
-            world.win.movePointer(0, int(world.win.getXSize() / 2), int(world.win.getYSize() / 2))
-        else:
-            print("Warning: movePointer not available on world.win")
-            
         # Enable controls
         self.keys = ("w", "s", "q", "e", "a", "d", "mouse2", "arrow_left", "arrow_up", "arrow_down", "arrow_right",
                      "page_up", "page_down")
@@ -139,13 +126,21 @@ class GizmoDemo(DirectObject):
             self.input[i] = False
             self.accept(i, self.update, extraArgs=[i, True])
             self.accept(i + "-up", self.update, extraArgs=[i, False])
-            
+
         # Mouse position
         self.accept("mouse-move", self.mouse_move)
-        
+
+        # Camera speed
+        # self.accept("wheel_up", self.mouse_up)
+        # self.accept("wheel_down", self.mouse_up)
+
         # Enable movement
         self.move_task = self.add_task(self.move)
-
+        
+        # Center the mouse.
+        #base.win.movePointer(0, int(base.win.getXSize() / 2), int(base.win.getYSize() / 2))
+        print("Initialization complete.")
+        
     def mouse_up(self, *args):
         print("uo", args)
 
@@ -167,23 +162,11 @@ class GizmoDemo(DirectObject):
             if self.input["mouse2"]:
                 dx, dy = self.mx - self.x, self.my - self.y
 
-                self.world.cam.set_p(self.world.cam, dy * 0.25 * 1)
-                self.world.cam.set_h(self.world.cam, dx * 0.25 * 1)
+                self.cam.set_p(self.cam, dy * 0.25 * self.move_speed)
+                self.cam.set_h(self.cam, dx * 0.25 * self.move_speed)
 
                 self.mx, self.my = self.x, self.y
-        return task.cont
-    
-    def set_key(self, key, value):
-        self.keys[key] = value
-    
-    def update_camera(self, task):
-        dt = globalClock.getDt()
-        move_speed = self.camera_speed * dt
-        
-        self.cam = self.world.cam
-        
-        # Calculate movement direction based on camera orientation.
-        move_dir = Vec3(0, 0, 0)
+
         # Keyboad Movement
         if self.input["q"] or self.input["page_up"]:
             self.cam.set_z(self.cam, 1 * self.move_speed)
@@ -202,72 +185,46 @@ class GizmoDemo(DirectObject):
 
         if self.input["a"] or self.input["arrow_left"]:
             self.cam.set_x(self.cam, -1 * self.move_speed)
-        
-        # Normalize the movement vector to prevent faster diagonal movement.
-        if move_dir.length() > 0:
-            move_dir.normalize()
-        
-        # Move the camera.
-        self.world.camera.setPos(self.world.camera.getPos() + move_dir * move_speed)
-        
-        # Handle mouse look.
-        if self.world.mouseWatcherNode.hasMouse():
-            if hasattr(self.world.win, "getPointer"):
-                md = self.win.getPointer(0)
-                x = md.getX()
-                y = md.getY()
 
-                # Calculate mouse movement delta.
-                dx = (x - self.win.getXSize() / 2) * self.mouse_sensitivity
-                dy = (y - self.win.getYSize() / 2) * self.mouse_sensitivity
-
-                # Rotate the camera.
-                self.world.camera.setH(self.world.camera.getH() - dx)
-                self.world.camera.setP(self.world.camera.getP() - dy)
-
-                if hasattr(world.win, "movePointer"):
-                    self.world.win.movePointer(0, int(self.world.win.getXSize() / 2), int(self.world.win.getYSize() / 2))
-                else:
-                    print("Warning: movePointer not available on world.win")
-        
-        return Task.cont
+        return task.cont
+    
+    def set_key(self, key, value):
+        self.keys[key] = value
     
     def computeDragParameter(self, r0, rdir, linePoint, lineDir):
         """
-        Given a ray (r0, rdir) and a line defined by (linePoint, lineDir),
-        compute the parameter t on the line such that the point (linePoint + t*lineDir)
-        is the closest point to the ray.
-        
-        Returns t.
+        Given a ray (r0, rdir) and a line (linePoint, lineDir),
+        compute the parameter t along the line for the closest point to the ray.
         """
-        # Ensure the drag axis is normalized.
         d = lineDir.normalized()
-        # rdir is assumed normalized.
-        # Let w0 = linePoint - r0.
         w0 = linePoint - r0
         B = d.dot(rdir)
-        # Denom: 1 - (d dot rdir)^2.
         denom = 1 - B * B
-        # To avoid division by zero, check denominator.
         if math.fabs(denom) < 1e-5:
             return 0.0
         t = (-d.dot(w0) + B * rdir.dot(w0)) / denom
         return t
     
     def onMouseDown(self, position):
-        """Handle left mouse button press: determine which arrow is clicked
-        and initialize the drag state."""
-        if not self.world.mouseWatcherNode.hasMouse():
+        if not base.mouseWatcherNode.hasMouse():
             return
         
-        mpos = self.world.mouseWatcherNode.getMouse()
-        self.pickerRay.setFromLens(self.camNode, mpos.getX(), mpos.getY())
+        mpos = position
+        nearPoint = Point3()
+        farPoint = Point3()
+        base.camLens.extrude((mpos["x"], mpos["y"]), nearPoint, farPoint)
+        r0 = render.getRelativePoint(self.world.camera, nearPoint)
+        rFar = render.getRelativePoint(self.world.camera, farPoint)
+        rdir = (rFar - r0).normalized()
+        self.pickerRay.setOrigin(r0)
+        self.pickerRay.setDirection(rdir)
+        
         self.picker.traverse(self.gizmo_root)
         
         if self.pq.getNumEntries() > 0:
             self.pq.sortEntries()
             entry = self.pq.getEntry(0)
-            nodeName = entry.getIntoNode().getName()  # Expected "gizmo_x", "gizmo_y", or "gizmo_z"
+            nodeName = entry.getIntoNode().getName()  # e.g., "gizmo_x"
             if nodeName.startswith("gizmo_"):
                 axis = nodeName.split("_")[-1]
                 if axis == "x":
@@ -280,60 +237,39 @@ class GizmoDemo(DirectObject):
                     self.dragAxis = None
                 
                 if self.dragAxis is not None:
-                    # Record the object's initial position.
                     self.initialGizmoPos = self.gizmo_root.getPos(render)
-                    
-                    # Define the drag line: passes through the initial position and
-                    # extends along the selected axis.
                     linePoint = self.initialGizmoPos
-                    lineDir = self.dragAxis  # Already unit length
-                    
-                    # Get the mouse ray (we use the near point as the ray origin).
-                    nearPoint = Point3()
-                    farPoint = Point3()
-                    self.camLens.extrude(mpos, nearPoint, farPoint)
-                    r0 = render.getRelativePoint(self.camera, nearPoint)
-                    rFar = render.getRelativePoint(self.camera, farPoint)
-                    rdir = (rFar - r0).normalized()
-                    
-                    # Compute the parameter along the drag line.
+                    lineDir = self.dragAxis
                     self.initialDragParam = self.computeDragParameter(r0, rdir, linePoint, lineDir)
-                    # Debug print.
                     print("Dragging axis:", axis, "initial param =", self.initialDragParam)
     
     def onMouseUp(self, position):
-        """Reset the dragging state."""
         self.dragAxis = None
         self.initialGizmoPos = None
         self.initialDragParam = None
     
     def mouseTask(self, task):
-        """If dragging is active, update the gizmo's position constrained along the selected axis."""
-        if self.dragAxis is not None and self.initialDragParam is not None and self.mouseWatcherNode.hasMouse():
-            mpos = self.world.mouseWatcherNode.getMouse()
-            
-            # Recompute the current mouse ray.
+        if self.dragAxis is not None and self.initialDragParam is not None and base.mouseWatcherNode.hasMouse():
+            mpos = base.mouseWatcherNode.getMouse()
             nearPoint = Point3()
             farPoint = Point3()
-            self.camLens.extrude(mpos, nearPoint, farPoint)
-            r0 = render.getRelativePoint(self.camera, nearPoint)
-            rFar = render.getRelativePoint(self.camera, farPoint)
+            base.camLens.extrude(mpos, nearPoint, farPoint)
+            r0 = render.getRelativePoint(self.world.camera, nearPoint)
+            rFar = render.getRelativePoint(self.world.camera, farPoint)
             rdir = (rFar - r0).normalized()
             
-            # The drag line is defined by the object's initial position and the drag axis.
             linePoint = self.initialGizmoPos
             lineDir = self.dragAxis
-            
-            # Compute the current parameter along the drag line.
             currentParam = self.computeDragParameter(r0, rdir, linePoint, lineDir)
             deltaParam = currentParam - self.initialDragParam
-            
-            # New position is offset along the drag axis.
             newPos = self.initialGizmoPos + self.dragAxis * deltaParam
             self.gizmo_root.setPos(render, newPos)
+            # Debug: print updated position.
+            # print("New gizmo pos:", newPos)
         return Task.cont
 
 if __name__ == "__main__":
-    # Run the demo.
-    demo = GizmoDemo()
+    # Create a Panda3DWorld instance (make sure your Panda3DWorld class sets up ShowBase properly).
+    world = Panda3DWorld()
+    demo = GizmoDemo(world)
     demo.run()
