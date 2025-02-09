@@ -254,7 +254,7 @@ class GizmoDemo(DirectObject):
         t = (-d.dot(w0) + B * rdir.dot(w0)) / denom
         return t
     
-    def onMouseDown(self):
+    def onMouseDown(self, position):
         """Handle left mouse button press: determine which arrow is clicked
         and initialize the drag state."""
         if not self.world.mouseWatcherNode.hasMouse():
@@ -301,7 +301,7 @@ class GizmoDemo(DirectObject):
                     # Debug print.
                     print("Dragging axis:", axis, "initial param =", self.initialDragParam)
     
-    def onMouseUp(self):
+    def onMouseUp(self, position):
         """Reset the dragging state."""
         self.dragAxis = None
         self.initialGizmoPos = None
