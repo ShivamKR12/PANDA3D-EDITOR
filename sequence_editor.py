@@ -495,18 +495,18 @@ class SequenceEditorTab(QWidget):
             bounds = arrow.getBounds()  # This returns a bounding volume (usually a sphere).
             center = bounds.getCenter()  # Center in the arrow's coordinate space.
             radius = bounds.getRadius()
-            if arrow.find("**/+CollisionNode").isEmpty():
-                print("is empty")
-                cn = CollisionNode(f"gizmo_{axis}_col")
-                cn.addSolid(CollisionSphere(0.5, 0, 0, radius))
-                
-
-                cn.setFromCollideMask(BitMask32.bit(10))
-                cn.setIntoCollideMask(BitMask32.bit(10))
-                
-                cn.setCollideMask(BitMask32.bit(10))
-                cn.setTag("arrow", axis)
-                arrow.attachNewNode(cn)
+            #if arrow.find("**/+CollisionNode").isEmpty():
+            #    print("is empty")
+            #    cn = CollisionNode(f"gizmo_{axis}_col")
+            #    cn.addSolid(CollisionSphere(0.5, 0, 0, radius))
+            #    
+#
+            #    cn.setFromCollideMask(BitMask32.bit(10))
+            #    cn.setIntoCollideMask(BitMask32.bit(10))
+            #    
+            #    cn.setCollideMask(BitMask32.bit(10))
+            #    cn.setTag("arrow", axis)
+            #    arrow.attachNewNode(cn)
 
     def update_gizmos_position(self, joint_np):
         """

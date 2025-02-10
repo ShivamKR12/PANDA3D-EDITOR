@@ -756,8 +756,8 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.hierarchy_tree)
 
         # Terrain control widget
-        #self.terrain_control_widget = TerrainControlWidget(terrain_painter_app)
-        #main_layout.addWidget(self.terrain_control_widget)
+        self.terrain_control_widget = TerrainControlWidget(terrain_painter_app)
+        main_layout.addWidget(self.terrain_control_widget)
 
         # Populate the hierarchy tree with example data
         self.populate_hierarchy_tree()
@@ -1046,9 +1046,9 @@ if __name__ == "__main__":
     world.hierarchy_tree.setAcceptDrops(True)
     
     right_panel.layout().addWidget(world.hierarchy_tree)
-    #terrain_painter_app = terrainEditor.TerrainPainterApp(world, pandaWidget)
-    #control_widget = TerrainControlWidget(terrain_painter_app)
-    #right_panel.layout().addWidget(control_widget)
+    terrain_painter_app = terrainEditor.TerrainPainterApp(world, pandaWidget)
+    control_widget = TerrainControlWidget(terrain_painter_app)
+    right_panel.layout().addWidget(control_widget)
     # Create a QWidget to hold the grid layout
     grid_widget = QWidget()
     # Create a grid layout for the input boxes (3x3)

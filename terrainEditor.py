@@ -279,7 +279,7 @@ class TerrainPainterApp(DirectObject):
             print("Bullet collision detected at:", hit_pos)
             self.paint_on_terrain(hit_pos)
         else:
-            print("No collision detected.")
+            print("No collision detected.11111111111")
     
         if not self.height >= self.max_height:
             self.height += 0.02
