@@ -1,2 +1,0 @@
-mode=Dedicated Server
-sync=Public
