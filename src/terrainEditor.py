@@ -173,7 +173,7 @@ class TerrainPainterApp(DirectObject):
         self.heightmap_texture.load(self.heightmap_image)
 
         self.terrain_node = ShaderTerrainMesh()
-        self.terrain_node.heightfield = base.loader.loadTexture("Heightmap.png")
+        self.terrain_node.heightfield = base.loader.loadTexture("./images/Heightmap.png")
         self.terrain_node.target_triangle_width = 50.0
         self.terrain_node.generate()
 
@@ -185,7 +185,7 @@ class TerrainPainterApp(DirectObject):
         self.terrain_np.set_shader(terrain_shader)
         self.terrain_np.set_shader_input("camera", base.camera)
 
-        grass_tex = base.loader.loadTexture("Grass.png")
+        grass_tex = base.loader.loadTexture("./images/Grass.png")
         grass_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)
         grass_tex.set_anisotropic_degree(16)
         self.terrain_np.set_texture(grass_tex)
