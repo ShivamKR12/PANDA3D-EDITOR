@@ -405,6 +405,15 @@ class StartupWindow(QWidget):
         self.label = QLabel("Select or Create a Project:")
         layout.addWidget(self.label)
         self.project_list = QListWidget()
+
+        # InZane84 2/11/2025: Let's be sure the cwd is '/src' =========================
+        editor_program_path = os.path.abspath(sys.argv[0])
+        if not os.path.samefile(os.getcwd(), os.path.dirname(editor_program_path)):
+            print("StartupWindow: init - cwd is different from the editor program directory!")
+            os.chdir(os.path.dirname(editor_program_path))
+            print("StartupWindow: init - Changed cwd to the editor program directory.")
+        # =============================================================================
+
         self.fill_project_list(os.path.abspath("./saves"))
         layout.addWidget(self.project_list)
         self.select_button = QPushButton("Open Project")
