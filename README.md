@@ -40,7 +40,7 @@ pip install -r requirements.txt
 ### Running the Editor
 Run the editor using:
 ```sh
-python editor.py
+python main.py
 ```
 
 ## User Interface
