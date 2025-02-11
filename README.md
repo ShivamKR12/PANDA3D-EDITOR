@@ -5,9 +5,13 @@ this project is mostly tested on python 3.9
 
 ## Overview
 The Panda3D Editor is a scene editor designed to facilitate the creation, visualization, and management of 3D environments for Panda3D-based applications. It provides an intuitive interface for editing scene objects, adjusting properties, and managing assets.
+[create_project](https://github.com/user-attachments/assets/506df29a-cb40-4d0f-86f4-4b12e1eeb659)
 
-## Features
+## Features!
+
 - **Scene Hierarchy Management**: Organize objects within a tree view.
+- ![editor_viewport](https://github.com/user-attachments/assets/8007e677-0d7f-4650-bff4-62f37a01e8cf)
+
 - **Transform Gizmos**: Move, rotate, and scale objects interactively.
 - **Property Inspector**: Modify object attributes in real-time.
 - **Undo/Redo System**: Keep track of changes and revert if needed.
@@ -15,11 +19,15 @@ The Panda3D Editor is a scene editor designed to facilitate the creation, visual
 - **Visual Debugging Tools**: Display collision bounds, lights, and physics objects.
 - **Networking Tools**: For creating games that will be multiplayer.
 - **Animation Tab**: Create animations inside the editor(in future updates it will also load from 3rd party).
+- ![animator](https://github.com/user-attachments/assets/21096391-ee7d-4951-9402-171c07f80a2a)
+
 - **Terrain paintning/sclupting**: Create/Paint/Sclupt a terrain mesh. 
 - **global registry & monobehavior system**: just like unity we have a mono behavior system!
 - **UI Editor**: Create & Edit UI's for your game.
 - **Save load system**: of course save your project in .toml for each entity and then it zips all entity tomls to .map, that way you can either share the .map to others or individual entities!
 - **Shader Editor**: create shaders live inside the editor and save them to individual files(shader node editor comming soon).
+- ![shader_editor](https://github.com/user-attachments/assets/136b4f32-6840-405f-9a69-c77c79304838)
+
 - **Node Editor**: If you are tired of typing you can use the node editor!
 
 ## Getting Started
@@ -32,7 +40,7 @@ pip install -r requirements.txt
 ### Running the Editor
 Run the editor using:
 ```sh
-python editor.py
+python main.py
 ```
 
 ## User Interface
