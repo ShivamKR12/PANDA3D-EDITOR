@@ -1,6 +1,6 @@
-panda3d
+panda3d>=1.10
 QPanda3D
-Pillow==10.0.0
-PyQt5==5.15.9
-toml==0.10.2
-twisted==22.10.0
+Pillow>=10.0
+PyQt5>=5.15
+toml>=0.10
+twisted>=22.10
