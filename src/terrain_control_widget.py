@@ -17,7 +17,7 @@ class TerrainControlWidget(QWidget):
         self.brush_size_slider.setMinimum(1)
         self.brush_size_slider.setMaximum(100)
         self.brush_size_slider.setValue(10)
-        self.brush_size_slider.valueChanged.connect(self.update_brush_size)
+        self.brush_size_slider.valueChanged.connect(lambda brush_size: self.update_brush_size(brush_size))
         layout.addWidget(self.brush_size_label)
         layout.addWidget(self.brush_size_slider)
 
@@ -27,7 +27,7 @@ class TerrainControlWidget(QWidget):
         self.brush_intensity_slider.setMinimum(1)
         self.brush_intensity_slider.setMaximum(100)
         self.brush_intensity_slider.setValue(10)
-        self.brush_intensity_slider.valueChanged.connect(self.update_brush_intensity)
+        self.brush_intensity_slider.valueChanged.connect(lambda brush_intensity: self.update_brush_intensity(brush_intensity))
         layout.addWidget(self.brush_intensity_label)
         layout.addWidget(self.brush_intensity_slider)
 
@@ -37,7 +37,7 @@ class TerrainControlWidget(QWidget):
         self.terrain_height_slider.setMinimum(1)
         self.terrain_height_slider.setMaximum(100)
         self.terrain_height_slider.setValue(10)
-        self.terrain_height_slider.valueChanged.connect(self.update_terrain_height)
+        self.terrain_height_slider.valueChanged.connect(lambda terrain_height: self.update_terrain_height(terrain_height))
         layout.addWidget(self.terrain_height_label)
         layout.addWidget(self.terrain_height_slider)
 

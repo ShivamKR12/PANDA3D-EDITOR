@@ -23,8 +23,6 @@ from panda3d.core import (
 from panda3d.bullet import (
     BulletWorld, BulletRigidBodyNode, BulletHeightfieldShape, ZUp
 )
-from PyQt5.QtWidgets import QApplication, QMainWindow
-from terrain_control_widget import TerrainControlWidget
 
 class TerrainCollider:
     def __init__(self, terrain_size, subdivisions, terrain):
@@ -34,8 +32,6 @@ class TerrainCollider:
         # Create a root node for collision objects.
         self.root = NodePath("TerrainColliders")
         self.root.reparentTo(render)  # Use reparentTo (capital T)
-        
-        self.holding = False
 
         # Optionally, create additional colliders (if needed).
         self.create_collider_tree()
@@ -63,32 +59,24 @@ class TerrainCollider:
 
         print("✅ Heightmap loaded successfully")
 
-        # Create the Bullet Heightfield Shape with optimized settings
-        self.max_height = 10.0
+        # Create the Bullet Heightfield Shape.
+        self.max_height = 10.0  # Maximum height scale.
         self.terrain_shape = BulletHeightfieldShape(self.heightmap, self.max_height, ZUp)
-        self.terrain_shape.setUseDiamondSubdivision(True)  # More efficient collision detection
-        
-        # Create the Bullet rigid body node with optimized settings
+
+        # Create the Bullet rigid body node for the terrain.
         self.terrain_node = BulletRigidBodyNode('Terrain')
         self.terrain_node.addShape(self.terrain_shape)
-        self.terrain_node.setMass(0)
-        self.terrain_node.setFriction(0.5)
-        self.terrain_node.setRestitution(0.1)
-        self.terrain_node.setDeactivationEnabled(True)  # Allow sleeping when static
-        
-        # Optimize collision mask
-        collision_mask = BitMask32.bit(1)
-        self.terrain_node.setIntoCollideMask(collision_mask)
+        self.terrain_node.setMass(0)  # Static terrain.
         
         # Attach the terrain collision node to the scene.
         self.terrain_np = render.attachNewNode(self.terrain_node)
         self.terrain_np.setPos(0, 0, 0)
         
+        # Set a collision mask so that picking (or other systems) detect it.
+        self.terrain_np.node().setIntoCollideMask(BitMask32.bit(1))
+
         # Add the terrain rigid body to the Bullet world.
         self.bullet_world.attachRigidBody(self.terrain_node)
-        
-    
-
 
     def create_collider_tree(self):
         """
@@ -120,26 +108,26 @@ class TerrainCollider:
 
     def update_colliders(self, updated_area):
         """
-        Optimized collision shape update
+        Update the terrain collision shape in-place without creating a new BulletRigidBodyNode.
+        The 'updated_area' parameter can be used to indicate which portion was changed.
         """
-        if updated_area is None:
-            # Full update needed
-            new_shape = BulletHeightfieldShape(self.heightmap, self.max_height, ZUp)
-            new_shape.setUseDiamondSubdivision(True)
-            
-            # Efficiently swap shapes
-            old_shape = self.terrain_node.getShape(0)
-            self.terrain_node.removeShape(old_shape)
-            self.terrain_node.addShape(new_shape)
-        else:
-            # Partial update for specific areas
-            x_start, y_start, x_end, y_end = updated_area
-            for x in range(x_start, x_end):
-                for y in range(y_start, y_end):
-                    height = self.heightmap.getGray(x, y)
-                    # Lower the height value
-                    new_height = max(0, height - 0.1)  # Adjust the decrement value as needed
-                    self.heightmap.setGray(x, y, new_height)
+        print(f"Updating colliders in area: {updated_area}")
+
+        # Create a new heightfield shape from the updated heightmap.
+        new_shape = BulletHeightfieldShape(self.heightmap, self.max_height, ZUp)
+
+        # Remove all existing shapes from the rigid body.
+        # (Assuming BulletRigidBodyNode supports removeShape or a similar method.)
+        num_shapes = self.terrain_node.getNumShapes()
+        for _ in range(num_shapes):
+            # Always remove the first shape (index 0) until none remain.
+            self.terrain_node.removeShape(self.terrain_node.getShape(0))
+
+        # Add the updated shape.
+        self.terrain_node.addShape(new_shape)
+
+        # (Optional) Reapply the collision mask if needed.
+        self.terrain_node.setIntoCollideMask(BitMask32.bit(1))
 
 
 class TerrainPainterApp(DirectObject):
@@ -148,23 +136,9 @@ class TerrainPainterApp(DirectObject):
         self.world = world
         self.widget = panda_widget
         self.holding = False
-        
-        # Collision update throttling variables:
-        self.collision_update_interval = 1.0  # Increase interval to reduce frequency
-        self.last_collision_update_time = 0.0
-        self.collision_update_needed = False
-        self.updated_area = None
-
-        # Brush properties
-        self.brush_size = 10
-        self.brush_intensity = 1.0
-        self.terrain_height = 1.0
-
-        # Add a task to handle collision updates
-        self.world.add_task(self.update_collision_task, "update_collision_task")
 
         # Load the heightmap image as a PNMImage
-        self.heightmap_image = PNMImage(Filename("Heightmap.png"))
+        self.heightmap_image = PNMImage(Filename("./images/Heightmap.png"))
 
         self.heightmap_image = PNMImage(512, 512)  # Resize to 512x512
 
@@ -174,7 +148,7 @@ class TerrainPainterApp(DirectObject):
 
         self.terrain_node = ShaderTerrainMesh()
         self.terrain_node.heightfield = base.loader.loadTexture("./images/Heightmap.png")
-        self.terrain_node.target_triangle_width = 50.0
+        self.terrain_node.target_triangle_width = 10.0
         self.terrain_node.generate()
 
         self.terrain_np = base.render.attach_new_node(self.terrain_node)
@@ -196,7 +170,7 @@ class TerrainPainterApp(DirectObject):
         base.accept("f3", base.toggleWireframe)
 
         self.mouse_ray = CollisionRay()
-        self.mouse_node = CollisionNode('mouse_ray')
+        self.mouse_node = CollisionNode('./images/mouse_ray')
         self.mouse_node.add_solid(self.mouse_ray)
         self.mouse_node.set_from_collide_mask(BitMask32.bit(1))
         self.mouse_node.set_into_collide_mask(BitMask32.bit(1))
@@ -213,7 +187,7 @@ class TerrainPainterApp(DirectObject):
 
         self.terrain_collider = TerrainCollider(1024, 100, self)
 
-        self.brush_selection = "b0.png"  #current brush Path
+        self.brush_selection = "./images/b0.png"  #current brush Path
 
         self.intensity = 0.2  # out of a 100 2/100
 
@@ -230,6 +204,7 @@ class TerrainPainterApp(DirectObject):
 
     def mouse_move(self, evt: dict):
         self.mx, self.my = evt['x'], evt['y']
+        
 
     def adjust_speed_of_brush(self, brush_image, speed_factor):
         # Create a new PNMImage with the same size and data as the original
@@ -272,6 +247,8 @@ class TerrainPainterApp(DirectObject):
         
         # Use Bullet's rayTestClosest to test against the Bullet world.
         result = self.terrain_collider.bullet_world.rayTestClosest(pFrom, pTo)
+        
+        self.terrain_collider.update_colliders(None)
     
         # Check for collisions
         if result.hasHit():
@@ -279,23 +256,14 @@ class TerrainPainterApp(DirectObject):
             print("Bullet collision detected at:", hit_pos)
             self.paint_on_terrain(hit_pos)
         else:
-            print("No collision detected.11111111111")
+            print("No collision detected.")
     
         if not self.height >= self.max_height:
             self.height += 0.02
     
         return Task.cont if self.holding else Task.done
 
-    def update_collision_task(self, task):
-        current_time = task.time
-        if self.collision_update_needed and (current_time - self.last_collision_update_time) >= self.collision_update_interval:
-            # Update the terrain collider with the modified heightmap.
-            self.terrain_collider.heightmap = self.heightmap_image
-            self.terrain_collider.update_colliders(updated_area=self.updated_area)
-            self.last_collision_update_time = current_time
-            self.collision_update_needed = False  # Reset the flag after updating
-            self.updated_area = None  # Reset the updated area
-        return task.cont
+
 
     def adjust_brightness_pillow(self, brush_image_path, brightness_factor):
         from PIL import Image
@@ -314,16 +282,16 @@ class TerrainPainterApp(DirectObject):
         brush_image = Image.merge('RGBA', (r, g, b, a))
         
         # Save the modified image temporarily.
-        brush_image.save("Temp_Brush.png")
+        brush_image.save("./images/Temp_Brush.png")
         
         # Convert it back to a PNMImage.
-        pnm_brush_image = PNMImage(Filename("Temp_Brush.png"))
+        pnm_brush_image = PNMImage(Filename("T./images/emp_Brush.png"))
         return pnm_brush_image
 
     def paint_on_terrain(self, hit_pos):
         # Map world position to heightmap coordinates.
         terrain_x = int((hit_pos.x + 512) / 1024 * self.heightmap_image.get_x_size())
-        terrain_y = int((hit_pos.y + 512) / 1024 * self.heightmap_image.get_x_size())
+        terrain_y = int((hit_pos.y + 512) / 1024 * self.heightmap_image.get_y_size())
 
         # Flip the Y-axis if necessary.
         terrain_y = self.heightmap_image.get_y_size() - terrain_y - 1
@@ -335,7 +303,7 @@ class TerrainPainterApp(DirectObject):
             self.adjust_brightness_pillow(self.brush_selection, self.height)
 
             # Load the brush image.
-            brush_image = PNMImage(Filename("Temp_Brush.png"))
+            brush_image = PNMImage(Filename("./images/Temp_Brush.png"))
             brush_width = brush_image.get_x_size()
             brush_height = brush_image.get_y_size()
 
@@ -364,22 +332,9 @@ class TerrainPainterApp(DirectObject):
             self.terrain_node.heightfield = self.heightmap_texture
             self.terrain_node.generate()
 
-            # Mark that a collision update is needed and set the updated area.
-            self.collision_update_needed = True
-            self.updated_area = (max(0, start_x), max(0, start_y), min(self.heightmap_image.get_x_size(), start_x + brush_width), min(self.heightmap_image.get_y_size(), start_y + brush_height))
+            # Update the collision system.
+            # Make sure the TerrainCollider instance uses the updated heightmap.
+            self.terrain_collider.heightmap = self.heightmap_image
+            self.terrain_collider.update_colliders(updated_area=(terrain_x, terrain_y))
         else:
             print("Click outside terrain bounds.")
-
-    def apply_changes(self):
-        # Apply changes to the terrain based on the current brush properties
-        print(f"Applying changes with brush size: {self.brush_size}, intensity: {self.brush_intensity}, height: {self.terrain_height}")
-
-if __name__ == "__main__":
-    import sys
-    app = QApplication(sys.argv)
-    main_window = QMainWindow()
-    terrain_painter_app = TerrainPainterApp(world=None, panda_widget=None)  # Replace with actual world and widget
-    control_widget = TerrainControlWidget(terrain_painter_app)
-    main_window.setCentralWidget(control_widget)
-    main_window.show()
-    sys.exit(app.exec_())
