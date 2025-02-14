@@ -22,11 +22,9 @@ uniform struct {
 uniform sampler2D p3d_Texture0;
 uniform vec3 wspos_camera;
 
-// Optional brush uniforms
-#ifdef USE_BRUSH
+// Brush uniforms
 uniform vec4 brush_pos;
 uniform float brush_size;
-#endif
 
 // Compute normal from the heightmap, this assumes the terrain is facing z-up
 vec3 get_terrain_normal() {
@@ -46,9 +44,9 @@ void main() {
   vec3 normal = get_terrain_normal();
 
   // Add some fake lighting - you usually want to use your own lighting code here
-  vec3 fake_sun = normalize(vec3(0.7, 0.2, 0.6));
+  vec3 fake_sun = normalize(vec3(1.0, 1.0, 1.0));
   vec3 shading = max(0.0, dot(normal, fake_sun)) * diffuse;
-  shading += vec3(0.07, 0.07, 0.1);
+  shading += vec3(0.1137, 0.1137, 0.1137);
 
   // Fake fog
   float dist = (distance(vtx_pos, wspos_camera) / 2.0);
@@ -57,21 +55,15 @@ void main() {
 
   vec4 terrainColor = vec4(shading, 1.0);
 
-  #ifdef USE_BRUSH
   // Calculate brush influence
   vec2 brush_uv = ((vtx_pos.xy - brush_pos.xy) / brush_size + 0.5);
   float brush_dist = length(brush_uv - vec2(0.5, 0.5));
 
   // Generate brush color procedurally
-  vec4 brushColor = vec4(0.0, 0.0, 1.0, 0.5); // Blue color with semi-transparency
+  vec4 brushColor = vec4(0.0, 0.76, 1.0, 0.5); // Blue color with semi-transparency
 
   // Blend brush color with terrain color
-  if (brush_dist <= 0.5) {
-    color = mix(terrainColor, brushColor, brushColor.a * (1.0 - brush_dist * 2.0));
-  } else {
-    color = terrainColor;
-  }
-  #else
-  color = terrainColor;
-  #endif
+
+  color = mix(terrainColor, brushColor, brushColor.a * (1.0 - brush_dist));
+
 }
