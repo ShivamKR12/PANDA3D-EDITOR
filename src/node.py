@@ -13,7 +13,9 @@ from PyQt5.QtWidgets import (
     QDockWidget,
     QPushButton,
     QVBoxLayout,
-    QWidget
+    QWidget,
+    QAction,
+    QMenu
 )
 
 # -----------------------------------------------------------------------------
@@ -202,6 +204,48 @@ class NodeScene(QGraphicsScene):
         self.temp_edge = None   # An EdgeItem we use while dragging
         self.drag_start_socket = None
 
+
+    def contextMenuEvent(self, event):
+        """Handle right-click to show context menu."""
+        view = self.views()[0]
+        item = self.itemAt(event.scenePos(), view.transform())
+        main_window = self.parent()
+
+        # Find if we clicked on text or any child item of a node
+        node_item = None
+        while item is not None:
+            if isinstance(item, NodeItem):
+                node_item = item
+                break
+            item = item.parentItem()
+
+        # Adjust selection based on right-click
+        if node_item:
+            if not node_item.isSelected():
+                self.clearSelection()
+                node_item.setSelected(True)
+        else:
+            self.clearSelection()
+
+        # Get selected nodes after adjustment
+        selected_nodes = [n for n in self.selectedItems() if isinstance(n, NodeItem)]
+
+        menu = QMenu()
+        if selected_nodes:
+            copy_action = QAction("Copy", menu)
+            copy_action.triggered.connect(lambda: main_window.copy_nodes(selected_nodes))
+            delete_action = QAction("Delete", menu)
+            delete_action.triggered.connect(lambda: main_window.delete_items(selected_nodes))
+            menu.addAction(copy_action)
+            menu.addAction(delete_action)
+        else:
+            paste_action = QAction("Paste", menu)
+            paste_action.triggered.connect(main_window.paste_nodes)
+            paste_action.setEnabled(main_window.clipboard is not None)
+            menu.addAction(paste_action)
+            
+        menu.exec_(event.screenPos())
+
     def begin_edge_drag(self, start_socket):
         """
         Called when the user clicks an output socket. 
@@ -298,6 +342,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Node Editor - CLEAR Lines (PyQt5)")
 
+        # Clipboard to store copied nodes
+        self.clipboard = None
+
         # Create Scene & View
         self.scene = NodeScene(self)
         self.view = NodeView(self.scene, self)
@@ -345,6 +392,95 @@ class MainWindow(QMainWindow):
 
         self.resize(1200, 800)
 
+
+    # -------------------------------------------------------------------------
+    #   Context Menu: Copy, Paste, Delete
+    # -------------------------------------------------------------------------
+    def copy_nodes(self, nodes):
+        """Copy selected nodes and their connecting edges to clipboard."""
+        if not nodes:
+            return
+        self.clipboard = {'nodes': [], 'edges': []}
+        copied_nodes = nodes  # List of NodeItem instances
+        for node in copied_nodes:
+            node_data = {
+                'type': node.node_type,
+                'title': node.title,
+                'pos': node.pos(),
+                'width': node.width,
+                'height': node.height
+            }
+            self.clipboard['nodes'].append(node_data)
+        
+        # Collect edges that connect two nodes within the copied selection
+        edges = []
+        for i, source_node in enumerate(copied_nodes):
+            if source_node.output_edge:
+                edge = source_node.output_edge
+                end_node = edge.end_socket.parent_node
+                if end_node in copied_nodes:
+                    j = copied_nodes.index(end_node)
+                    edges.append({'source': i, 'target': j})
+        self.clipboard['edges'] = edges
+
+    def paste_nodes(self):
+        """Paste nodes and edges from clipboard with an offset."""
+        if not self.clipboard or 'nodes' not in self.clipboard:
+            return
+        delta = QPointF(20, 20)  # Offset for pasting
+        new_nodes = []
+        for node_data in self.clipboard['nodes']:
+            node = NodeItem(
+                title=node_data['title'],
+                node_type=node_data['type'],
+                width=node_data['width'],
+                height=node_data['height']
+            )
+            node.setPos(node_data['pos'] + delta)
+            self.scene.addItem(node)
+            new_nodes.append(node)
+        
+        # Recreate the edges between pasted nodes
+        for edge_data in self.clipboard['edges']:
+            source_idx = edge_data['source']
+            target_idx = edge_data['target']
+            source_node = new_nodes[source_idx]
+            target_node = new_nodes[target_idx]
+            # Create a new edge between the output and input sockets
+            edge = EdgeItem(source_node.output_socket, target_node.input_socket)
+            self.scene.addItem(edge)
+        
+        # Select the new nodes
+        for node in new_nodes:
+            node.setSelected(True)
+
+    def delete_items(self, items):
+        """Delete specified items (nodes or edges) and their connections."""
+        for item in items:
+            if isinstance(item, NodeItem):
+                # Remove input edge
+                if item.input_edge:
+                    edge = item.input_edge
+                    source_node = edge.start_socket.parent_node
+                    source_node.output_edge = None
+                    self.scene.removeItem(edge)
+                # Remove output edge
+                if item.output_edge:
+                    edge = item.output_edge
+                    target_node = edge.end_socket.parent_node
+                    target_node.input_edge = None
+                    self.scene.removeItem(edge)
+                # Remove the node
+                self.scene.removeItem(item)
+            elif isinstance(item, EdgeItem):
+                # Update both connected nodes
+                if item.start_socket:
+                    item.start_socket.parent_node.output_edge = None
+                if item.end_socket:
+                    item.end_socket.parent_node.input_edge = None
+                self.scene.removeItem(item)
+
+
     # -------------------------------------------------------------------------
     #   Delete functionality
     # -------------------------------------------------------------------------
@@ -355,8 +491,9 @@ class MainWindow(QMainWindow):
         self.delete_btn.setEnabled(has_deletable)
 
     def delete_selected_nodes(self):
-        """Handle deletion of nodes and edges, updating connected nodes."""
+        """Handle deletion of selected nodes and edges."""
         selected_items = self.scene.selectedItems()
+        self.delete_items(selected_items)
         for item in selected_items:
             if isinstance(item, NodeItem):
                 # Remove input edge (edge coming into this node)

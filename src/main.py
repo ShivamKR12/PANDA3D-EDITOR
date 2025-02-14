@@ -209,7 +209,7 @@ class PandaTest(Panda3DWorld):
         self.hierarchy_tree.clear()
         self.hierarchy_tree1.clear()
         
-        self.populate_hierarchy(self.hierarchy_tree, render)
+        self.populate_hierarchy(self.hierarchy_tree, self.render)
         self.populate_hierarchy(self.hierarchy_tree1, self.render2d)
     #TODO make each object from toml load up with a function that runs on load
 
@@ -875,8 +875,10 @@ def delete_selection():
 
     # Proceed with deletion if not the main render
     node.removeNode()
-    world.refresh()
     world.selected_node = None
+    del node
+    
+    world.refresh()
     print(f"Node '{node_name}' deleted successfully.")
 
 

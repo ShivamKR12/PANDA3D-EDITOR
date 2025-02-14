@@ -2,8 +2,12 @@ from panda3d.core import (
     ShaderTerrainMesh, Shader, MouseWatcher, Point3,
     NodePath, CollisionRay, CollisionNode, CollisionHandlerQueue, CollisionTraverser,
     PNMImage, Filename, LVecBase4f, PNMPainter, PNMBrush, SamplerState, CollisionBox, BitMask32,
-    Geom, GeomNode, GeomVertexFormat, GeomVertexData, GeomVertexWriter, GeomLines, Texture, LColorf
+    Geom, GeomNode, GeomVertexFormat, GeomVertexData, GeomVertexWriter, GeomLines, Texture, LColorf,
+    CardMaker, TransparencyAttrib
 )
+
+from panda3d.bullet import BulletDebugNode
+
 from direct.showbase.ShowBase import ShowBase
 from panda3d.core import load_prc_file_data
 
@@ -62,9 +66,11 @@ class TerrainCollider:
         # Create the Bullet Heightfield Shape.
         self.max_height = 10.0  # Maximum height scale.
         self.terrain_shape = BulletHeightfieldShape(self.heightmap, self.max_height, ZUp)
-
+        
         # Create the Bullet rigid body node for the terrain.
         self.terrain_node = BulletRigidBodyNode('Terrain')
+        
+        
         self.terrain_node.addShape(self.terrain_shape)
         self.terrain_node.setMass(0)  # Static terrain.
         
@@ -136,6 +142,28 @@ class TerrainPainterApp(DirectObject):
         self.world = world
         self.widget = panda_widget
         self.holding = False
+        
+        # Collision update throttling variables:
+        self.collision_update_interval = 1.0  # Increase interval to reduce frequency
+        self.last_collision_update_time = 0.0
+        self.collision_update_needed = False
+        self.updated_area = None
+
+        # Brush properties
+        self.brush_size = 100
+        self.brush_intensity = 1.0
+        self.terrain_height = 1.0
+
+        # Add a task to handle collision updates
+        #self.world.add_task(self.update_collision_task, "update_collision_task")
+
+        # Create the brush visual
+
+        # Add a task to update the brush visual
+        self.world.add_task(self.update_brush_visual_task, "update_brush_visual_task")
+
+
+        
 
         # Load the heightmap image as a PNMImage
         self.heightmap_image = PNMImage(Filename("./images/Heightmap.png"))
@@ -155,7 +183,9 @@ class TerrainPainterApp(DirectObject):
         self.terrain_np.set_scale(512, 512, 100)
         self.terrain_np.set_pos(-512 // 2, -512 // 2, -70.0)
 
+        # Load and set the terrain shader with the USE_BRUSH preprocessor directive
         terrain_shader = Shader.load(Shader.SL_GLSL, "terrain.vert.glsl", "terrain.frag.glsl")
+        self.terrain_np.set_shader_input("USE_BRUSH", True)
         self.terrain_np.set_shader(terrain_shader)
         self.terrain_np.set_shader_input("camera", base.camera)
 
@@ -192,6 +222,78 @@ class TerrainPainterApp(DirectObject):
         self.intensity = 0.2  # out of a 100 2/100
 
         self.max_height = 1
+        
+        self.create_brush_visual()
+
+        # Enable Bullet debug rendering
+        self.enable_bullet_debug()
+
+    def create_brush_visual(self):
+        cm = CardMaker("brush_visual")
+        cm.set_frame(-0.5, 0.5, -0.5, 0.5)
+        self.brush_visual = self.world.render.attach_new_node(cm.generate())
+        self.brush_visual.set_transparency(TransparencyAttrib.M_alpha)
+        self.brush_visual.set_color(1, 1, 1, 0.5)  # Semi-transparent white
+        self.brush_visual.set_scale(self.brush_size)
+        
+        # Create a circular texture for the brush visual
+        circle_tex = PNMImage(256, 256, 4)
+        circle_tex.fill(0, 0, 0)  # Fill with transparent black
+
+        center_x = circle_tex.get_x_size() // 2
+        center_y = circle_tex.get_y_size() // 2
+        radius = min(center_x, center_y)
+
+        for x in range(circle_tex.get_x_size()):
+            for y in range(circle_tex.get_y_size()):
+                dx = x - center_x
+                dy = y - center_y
+                distance = (dx * dx + dy * dy) ** 0.5
+                if distance <= radius:
+                    t = distance / radius
+                    r = 0.0
+                    g = 0.0
+                    b = 1.0  # Blue color
+                    a = 0.5  # Semi-transparent
+                    circle_tex.set_xel_a(x, y, r, g, b, a)
+
+        tex = Texture()
+        tex.load(circle_tex)
+        self.brush_visual.set_texture(tex)
+        
+        self.brush_visual.hide()
+
+        # Embed the brush visual into the terrain shader
+        self.terrain_np.set_shader_input("brush_pos", LVecBase4f(0, 0, 0, 0))
+        self.terrain_np.set_shader_input("brush_size", self.brush_size)
+
+    def update_brush_visual(self, hit_pos):
+        if hit_pos:
+            self.brush_visual.set_pos(hit_pos)
+            self.brush_visual.set_scale(self.brush_size)
+            self.brush_visual.show()
+            self.terrain_np.set_shader_input("brush_pos", LVecBase4f(hit_pos.x, hit_pos.y, hit_pos.z, 1))
+        else:
+            self.brush_visual.hide()
+            self.terrain_np.set_shader_input("brush_pos", LVecBase4f(0, 0, 0, 0))
+        self.terrain_np.set_shader_input("brush_size", self.brush_size)
+
+    def update_brush_visual_task(self, task):
+        if self.world.mouseWatcherNode.has_mouse():
+            mouse_pos = self.world.mouseWatcherNode.get_mouse()
+            pFrom = Point3()
+            pTo = Point3()
+            self.world.camLens.extrude(mouse_pos, pFrom, pTo)
+            pFrom = self.world.render.get_relative_point(self.world.cam, pFrom)
+            pTo = self.world.render.get_relative_point(self.world.cam, pTo)
+            
+            result = self.terrain_collider.bullet_world.rayTestClosest(pFrom, pTo)
+            if result.hasHit():
+                hit_pos = result.getHitPos()
+                self.update_brush_visual(hit_pos)
+            else:
+                self.update_brush_visual(None)
+        return task.cont
 
     def start_holding(self, position):
         self.mx, self.my = position['x'], position['y']
@@ -238,7 +340,8 @@ class TerrainPainterApp(DirectObject):
             print("Mouse not detected.")
             return Task.cont
     
-        pMouse = base.mouseWatcherNode.getMouse()
+        pMouse = self.world.mouseWatcherNode.getMouse()
+        #pMouse = self.mx, self.my
         pFrom = Point3()
         pTo = Point3()
         base.camLens.extrude(pMouse, pFrom, pTo)
@@ -249,6 +352,7 @@ class TerrainPainterApp(DirectObject):
         result = self.terrain_collider.bullet_world.rayTestClosest(pFrom, pTo)
         
         self.terrain_collider.update_colliders(None)
+        
     
         # Check for collisions
         if result.hasHit():
@@ -285,13 +389,27 @@ class TerrainPainterApp(DirectObject):
         brush_image.save("./images/Temp_Brush.png")
         
         # Convert it back to a PNMImage.
-        pnm_brush_image = PNMImage(Filename("T./images/emp_Brush.png"))
+        pnm_brush_image = PNMImage(Filename("./images/Temp_Brush.png"))
         return pnm_brush_image
+    
+    def update_brush_size(self, size):
+        
+        self.brush_size = size
+        
+    def update_brush_intensity(self, intesity):
+        
+        self.brush_intesity = intesity
+        
+    def update_terrain_height(self, terrain_height):
+        
+        self.terrain_np.set_scale_z(terrain_height)
+        
+    
 
     def paint_on_terrain(self, hit_pos):
         # Map world position to heightmap coordinates.
-        terrain_x = int((hit_pos.x + 512) / 1024 * self.heightmap_image.get_x_size())
-        terrain_y = int((hit_pos.y + 512) / 1024 * self.heightmap_image.get_y_size())
+        terrain_x = int((hit_pos.x + 256) / 512 * self.heightmap_image.get_x_size())
+        terrain_y = int((hit_pos.y + 256) / 512 * self.heightmap_image.get_y_size())
 
         # Flip the Y-axis if necessary.
         terrain_y = self.heightmap_image.get_y_size() - terrain_y - 1
@@ -321,8 +439,8 @@ class TerrainPainterApp(DirectObject):
                 max(0, start_y),
                 0,  # Brush offset X.
                 0,  # Brush offset Y.
-                min(brush_width, self.heightmap_image.get_x_size() - start_x),  # Brush width.
-                min(brush_height, self.heightmap_image.get_y_size() - start_y)  # Brush height.
+                min(brush_width, self.heightmap_image.get_x_size() - start_x * self.brush_size),  # Brush width.
+                min(brush_height, self.heightmap_image.get_y_size() - start_y * self.brush_size)  # Brush height.
             )
 
             # Update the heightmap texture with the modified heightmap.
@@ -332,9 +450,17 @@ class TerrainPainterApp(DirectObject):
             self.terrain_node.heightfield = self.heightmap_texture
             self.terrain_node.generate()
 
-            # Update the collision system.
-            # Make sure the TerrainCollider instance uses the updated heightmap.
-            self.terrain_collider.heightmap = self.heightmap_image
-            self.terrain_collider.update_colliders(updated_area=(terrain_x, terrain_y))
+            # Mark that a collision update is needed and set the updated area.
+            self.collision_update_needed = True
+            self.updated_area = (max(0, start_x), max(0, start_y), min(self.heightmap_image.get_x_size(), start_x + brush_width), min(self.heightmap_image.get_y_size(), start_y + brush_height))
         else:
             print("Click outside terrain bounds.")
+
+    def enable_bullet_debug(self):
+        debug_node = BulletDebugNode('Debug')
+        debug_node.showWireframe(True)
+        debug_node.showConstraints(True)
+        debug_node.showBoundingBoxes(False)
+        debug_node.showNormals(False)
+        self.debug_np = self.world.render.attach_new_node(debug_node)
+        self.terrain_collider.bullet_world.setDebugNode(self.debug_np.node())
