@@ -144,7 +144,7 @@ class QPanda3DWidget(QWidget):
         if mime.hasUrls():  # Check if the dragged data contains URLs (files)
             for url in mime.urls():
                 file_path = url.toLocalFile()
-                if file_path.endswith((".bam", ".egg", ".obj")):  # Supported file extensions
+                if file_path.endswith((".bam", ".egg", ".obj", ".glb")):  # Supported file extensions
                     event.accept()  # Accept the drag if it's a valid file
                     return
         event.ignore()
@@ -157,7 +157,7 @@ class QPanda3DWidget(QWidget):
         if mime.hasUrls():  # Ensure the dropped data contains URLs (files)
             for url in mime.urls():
                 file_path = url.toLocalFile()
-                if file_path.endswith((".bam", ".egg", ".obj")):
+                if file_path.endswith((".bam", ".egg", ".obj", ".glb")):
                     print(f"Dropped file: {file_path}")
                     self.add_model_to_world(file_path)
             event.accept()
