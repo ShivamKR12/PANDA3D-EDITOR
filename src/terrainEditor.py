@@ -339,8 +339,8 @@ class TerrainPainterApp(DirectObject):
         
         # let's not...
         # Use Bullet's rayTestClosest to test against the Bullet world.
-        #result = self.terrain_collider.bullet_world.rayTestClosest(pFrom, pTo)
-        #self.terrain_collider.update_colliders(None)
+        result = self.terrain_collider.bullet_world.rayTestClosest(pFrom, pTo)
+        self.terrain_collider.update_colliders(None)
         
         # update ray's origin and direction
         self.mouse_ray.set_origin(pFrom)
@@ -349,13 +349,15 @@ class TerrainPainterApp(DirectObject):
         self.collision_handler.clear_entries()
         self.collision_traverser.traverse(render)
 
+
+
         # Check for collisions
-        """if result.hasHit():
+        if result.hasHit():
             hit_pos = result.getHitPos()
             print("Bullet collision detected at:", hit_pos)
             #self.paint_on_terrain(hit_pos)
         else:
-            print("No collision detected.")"""
+            print("No collision detected.")
 
         if self.collision_handler.get_num_entries() > 0:
             print("Click detected!")
@@ -378,8 +380,10 @@ class TerrainPainterApp(DirectObject):
             object_entries = [e for e in entries if e.get_into_node_path().get_collide_mask() & self.object_mask]
             if object_entries:
                 object_entry = object_entries[0]
+                print("Click on a object")
+                # Handle object selection
+                self.selected_object = object_entry.get_into_node_path()
                 self.highlight_object(object_entry)
-                print("Clicked on object")
                 return Task.done
             ui_entries = [e for e in entries if e.get_into_node_path().get_collide_mask() & self.ui_mask]
             if ui_entries:
