@@ -335,7 +335,7 @@ class TerrainPainterApp(DirectObject):
         if result.hasHit():
             hit_pos = result.getHitPos()
             print("Bullet collision detected at:", hit_pos)
-            self.paint_on_terrain(hit_pos)
+            #self.paint_on_terrain(hit_pos)
         else:
             print("No collision detected.")
     
