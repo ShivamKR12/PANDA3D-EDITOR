@@ -172,3 +172,11 @@ cython_debug/
 Cursor Setup 0.45.11 - x64.exe
 jsapi.py
 PANDA3D-EDITOR.zip
+saves/foowoo/preferences.toml
+saves/foowoo/foowoo.map
+saves/foowoo/foowoo/lights/lights.toml
+src/saves/bah/bah.map
+src/saves/bah/preferences.toml
+src/saves/bah/bah/lights/lights.toml
+src/toml_loader/bah/lights/lights.toml
+toml_loader/foowoo/lights/lights.toml

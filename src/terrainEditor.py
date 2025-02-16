@@ -133,8 +133,8 @@ class TerrainCollider:
         self.terrain_node.addShape(new_shape)
 
         # (Optional) Reapply the collision mask if needed.
-        self.terrain_node.setIntoCollideMask(BitMask32.bit(1))
-
+        #self.terrain_node.setIntoCollideMask(BitMask32.bit(1))
+        self.terrain_node.setIntoCollideMask(BitMask32.bit(0))
 
 class TerrainPainterApp(DirectObject):
     def __init__(self, world: Panda3DWorld, panda_widget):
@@ -160,7 +160,7 @@ class TerrainPainterApp(DirectObject):
         # Create the brush visual
 
         # Add a task to update the brush visual
-        self.world.add_task(self.update_brush_visual_task, "update_brush_visual_task")
+        #self.world.add_task(self.update_brush_visual_task, "update_brush_visual_task")
 
 
         
@@ -206,13 +206,20 @@ class TerrainPainterApp(DirectObject):
         self.mouse_ray = CollisionRay()
         self.mouse_node = CollisionNode('./images/mouse_ray')
         self.mouse_node.add_solid(self.mouse_ray)
-        self.mouse_node.set_from_collide_mask(BitMask32.bit(1))
-        self.mouse_node.set_into_collide_mask(BitMask32.bit(1))
+        self.mouse_node.set_from_collide_mask(BitMask32.bit(10))
+        self.mouse_node.set_into_collide_mask(BitMask32.bit(10))
         self.mouse_node_path = base.camera.attach_new_node(self.mouse_node)
 
         self.collision_traverser.add_collider(self.mouse_node_path, self.collision_handler)
 
-        self.terrain_np.set_collide_mask(BitMask32.bit(1))
+        #self.terrain_np.set_collide_mask(BitMask32.bit(1))
+
+        # Define collision masks for different categories.
+        self.gizmo_mask = BitMask32.bit(10)
+        self.terrain_mask = BitMask32.bit(2)
+        self.object_mask = BitMask32.bit(3)
+        self.ui_mask = BitMask32.bit(4)
+        combimed_mask = self.gizmo_mask | self.terrain_mask | self.object_mask | self.ui_mask
 
         self.accept('mouse1', self.start_holding)
         self.accept('mouse1-up', self.stop_holding)
@@ -311,6 +318,11 @@ class TerrainPainterApp(DirectObject):
 
         return new_brush_image
 
+    def highlight_object(self, object_entry):
+        object_n = object_entry.get_into_node_path()
+        object_n.set_color(1, 0, 0, 1)
+        print(f"Object highlighted: {object_n.get_name()}")
+
     def on_mouse_click(self, Task):
         # Ensure mouse is within bounds
         if not base.mouseWatcherNode.hasMouse():
@@ -325,24 +337,65 @@ class TerrainPainterApp(DirectObject):
         pFrom = render.getRelativePoint(base.cam, pFrom)
         pTo = render.getRelativePoint(base.cam, pTo)
         
+        # let's not...
         # Use Bullet's rayTestClosest to test against the Bullet world.
         result = self.terrain_collider.bullet_world.rayTestClosest(pFrom, pTo)
-        
         self.terrain_collider.update_colliders(None)
         
-    
+        # update ray's origin and direction
+        self.mouse_ray.set_origin(pFrom)
+        self.mouse_ray.set_direction((pTo - pFrom).normalized())
+        # traverse the scene graph
+        self.collision_handler.clear_entries()
+        self.collision_traverser.traverse(render)
+
+
+
         # Check for collisions
         if result.hasHit():
             hit_pos = result.getHitPos()
             print("Bullet collision detected at:", hit_pos)
-            self.paint_on_terrain(hit_pos)
+            #self.paint_on_terrain(hit_pos)
         else:
             print("No collision detected.")
+
+        if self.collision_handler.get_num_entries() > 0:
+            print("Click detected!")
+            self.collision_handler.sort_entries()
+            entries = self.collision_handler.get_entries()
+
+            # Filter entries based on collision masks.
+            gizmo_entries = [e for e in entries if e.get_into_node_path().get_collide_mask() & self.gizmo_mask]
+            if gizmo_entries:
+                gizmo_entry = gizmo_entries[0]
+                print("Clicked on gizmos")
+                self.base.animator_tab.start_gizmo_drag(gizmo_entry)
+                return Task.done
+            terrain_entries = [e for e in entries if e.get_into_node_path().get_collide_mask() & self.terrain_mask]
+            if terrain_entries:
+                terrain_entry = terrain_entries[0]
+                print("Clicked on terrain")
+                # Handle terrain collision...
+                return Task.done
+            object_entries = [e for e in entries if e.get_into_node_path().get_collide_mask() & self.object_mask]
+            if object_entries:
+                object_entry = object_entries[0]
+                print("Click on a object")
+                # Handle object selection
+                self.selected_object = object_entry.get_into_node_path()
+                self.highlight_object(object_entry)
+                return Task.done
+            ui_entries = [e for e in entries if e.get_into_node_path().get_collide_mask() & self.ui_mask]
+            if ui_entries:
+                ui_entry = ui_entries[0]
+                print("Clicked on UI")
+                # Handle UI interaction...
+                return Task.done
     
         if not self.height >= self.max_height:
             self.height += 0.02
     
-        return Task.cont if self.holding else Task.done
+        #return Task.cont if self.holding else Task.done
 
 
 
