@@ -79,7 +79,7 @@ class TerrainCollider:
         self.terrain_np.setPos(0, 0, 0)
         
         # Set a collision mask so that picking (or other systems) detect it.
-        self.terrain_np.node().setIntoCollideMask(BitMask32.bit(1))
+        self.terrain_np.node().setIntoCollideMask(BitMask32.bit(2))
 
         # Add the terrain rigid body to the Bullet world.
         self.bullet_world.attachRigidBody(self.terrain_node)
@@ -134,7 +134,7 @@ class TerrainCollider:
 
         # (Optional) Reapply the collision mask if needed.
         #self.terrain_node.setIntoCollideMask(BitMask32.bit(1))
-        self.terrain_node.setIntoCollideMask(BitMask32.bit(0))
+        self.terrain_node.setIntoCollideMask(BitMask32.bit(2))
 
 class TerrainPainterApp(DirectObject):
     def __init__(self, world: Panda3DWorld, panda_widget):
@@ -163,7 +163,8 @@ class TerrainPainterApp(DirectObject):
         #self.world.add_task(self.update_brush_visual_task, "update_brush_visual_task")
 
 
-        
+        self.world.add_task(self.update_brush_visual_task, "update_brush_visual_task")
+
 
         # Load the heightmap image as a PNMImage
         self.heightmap_image = PNMImage(Filename("./images/Heightmap.png"))
@@ -203,23 +204,24 @@ class TerrainPainterApp(DirectObject):
         
         base.accept("f3", base.toggleWireframe)
 
-        self.mouse_ray = CollisionRay()
-        self.mouse_node = CollisionNode('./images/mouse_ray')
-        self.mouse_node.add_solid(self.mouse_ray)
-        self.mouse_node.set_from_collide_mask(BitMask32.bit(10))
-        self.mouse_node.set_into_collide_mask(BitMask32.bit(10))
-        self.mouse_node_path = base.camera.attach_new_node(self.mouse_node)
-
-        self.collision_traverser.add_collider(self.mouse_node_path, self.collision_handler)
-
-        #self.terrain_np.set_collide_mask(BitMask32.bit(1))
-
         # Define collision masks for different categories.
         self.gizmo_mask = BitMask32.bit(10)
         self.terrain_mask = BitMask32.bit(2)
         self.object_mask = BitMask32.bit(3)
         self.ui_mask = BitMask32.bit(4)
         combimed_mask = self.gizmo_mask | self.terrain_mask | self.object_mask | self.ui_mask
+        
+        self.mouse_ray = CollisionRay()
+        self.mouse_node = CollisionNode('./images/mouse_ray')
+        self.mouse_node.add_solid(self.mouse_ray)
+        self.mouse_node.set_from_collide_mask(BitMask32.bit(2))
+        self.mouse_node.set_into_collide_mask(BitMask32.bit(2))
+        self.mouse_node_path = base.camera.attach_new_node(self.mouse_node)
+
+        self.collision_traverser.add_collider(self.mouse_node_path, self.collision_handler)
+        
+        #self.terrain_np.set_collide_mask(BitMask32.bit(1))
+
 
         self.accept('mouse1', self.start_holding)
         self.accept('mouse1-up', self.stop_holding)
@@ -350,6 +352,8 @@ class TerrainPainterApp(DirectObject):
         self.collision_traverser.traverse(render)
 
 
+        if not self.height >= self.max_height:
+            self.height += 0.02
 
         # Check for collisions
         if result.hasHit():
@@ -359,25 +363,27 @@ class TerrainPainterApp(DirectObject):
         else:
             print("No collision detected.")
 
-        if self.collision_handler.get_num_entries() > 0:
+        if result.hasHit():
+            hit_pos = result.getHitPos()
             print("Click detected!")
-            self.collision_handler.sort_entries()
-            entries = self.collision_handler.get_entries()
+            # Use Bullet's rayTestAll to get all collision results.
+            results = self.terrain_collider.bullet_world.rayTestAll(pFrom, pTo)
+            entries = results.getHits()
 
             # Filter entries based on collision masks.
-            gizmo_entries = [e for e in entries if e.get_into_node_path().get_collide_mask() & self.gizmo_mask]
+            gizmo_entries = [e for e in entries if e.getNode().get_into_collide_mask() & self.gizmo_mask]
             if gizmo_entries:
                 gizmo_entry = gizmo_entries[0]
                 print("Clicked on gizmos")
                 self.base.animator_tab.start_gizmo_drag(gizmo_entry)
                 return Task.done
-            terrain_entries = [e for e in entries if e.get_into_node_path().get_collide_mask() & self.terrain_mask]
+            terrain_entries = [e for e in entries if e.getNode().get_into_collide_mask() & self.terrain_mask]
             if terrain_entries:
                 terrain_entry = terrain_entries[0]
-                print("Clicked on terrain")
+                self.paint_on_terrain(hit_pos)
                 # Handle terrain collision...
-                return Task.done
-            object_entries = [e for e in entries if e.get_into_node_path().get_collide_mask() & self.object_mask]
+                return Task.cont if self.holding else Task.done
+            object_entries = [e for e in entries if e.getNode().get_into_collide_mask() & self.object_mask]
             if object_entries:
                 object_entry = object_entries[0]
                 print("Click on a object")
@@ -385,15 +391,13 @@ class TerrainPainterApp(DirectObject):
                 self.selected_object = object_entry.get_into_node_path()
                 self.highlight_object(object_entry)
                 return Task.done
-            ui_entries = [e for e in entries if e.get_into_node_path().get_collide_mask() & self.ui_mask]
+            ui_entries = [e for e in entries if e.getNode().get_into_collide_mask() & self.ui_mask]
             if ui_entries:
                 ui_entry = ui_entries[0]
                 print("Clicked on UI")
                 # Handle UI interaction...
                 return Task.done
     
-        if not self.height >= self.max_height:
-            self.height += 0.02
     
         #return Task.cont if self.holding else Task.done
 
@@ -454,6 +458,7 @@ class TerrainPainterApp(DirectObject):
             brush_image = PNMImage(Filename("./images/Temp_Brush.png"))
             brush_width = brush_image.get_x_size()
             brush_height = brush_image.get_y_size()
+            
 
             # (Optional) Adjust the brush speed/intensity.
             self.adjust_speed_of_brush(brush_image, self.intensity)
@@ -463,14 +468,19 @@ class TerrainPainterApp(DirectObject):
             start_y = terrain_y - brush_height // 2
 
             # Apply (blend) the brush to the heightmap.
+            scaled_brush_width = int(brush_width * (self.brush_size / 10))
+            scaled_brush_height = int(brush_height * (self.brush_size / 10))
+            
+            
+
             self.heightmap_image.blend_sub_image(
                 brush_image,
                 max(0, start_x),  # Clamp to ensure valid position.
                 max(0, start_y),
                 0,  # Brush offset X.
                 0,  # Brush offset Y.
-                min(brush_width, (self.heightmap_image.get_x_size() - start_x) * self.brush_size),  # Brush width.
-                min(brush_height, (self.heightmap_image.get_y_size() - start_y) * self.brush_size)  # Brush height.
+                min(scaled_brush_width, self.heightmap_image.get_x_size() - start_x),  # Brush width.
+                min(scaled_brush_height, self.heightmap_image.get_y_size() - start_y)  # Brush height.
             )
 
             # Update the heightmap texture with the modified heightmap.

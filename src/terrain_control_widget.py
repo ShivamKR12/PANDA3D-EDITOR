@@ -7,14 +7,16 @@ class TerrainControlWidget(QWidget):
         self.terrain_painter_app = terrain_painter_app
 
         self.init_ui()
+        
+        self.hide()
 
     def init_ui(self):
         layout = QVBoxLayout()
 
         # Brush size control
-        self.brush_size_label = QLabel("Brush Size: 10")
+        self.brush_size_label = QLabel("Brush Size: 100")
         self.brush_size_slider = QSlider(Qt.Horizontal)
-        self.brush_size_slider.setMinimum(1)
+        self.brush_size_slider.setMinimum(0)
         self.brush_size_slider.setMaximum(100)
         self.brush_size_slider.setValue(10)
         self.brush_size_slider.valueChanged.connect(lambda brush_size: self.update_brush_size(brush_size))
@@ -50,7 +52,8 @@ class TerrainControlWidget(QWidget):
 
     def update_brush_size(self, value):
         self.brush_size_label.setText(f"Brush Size: {value}")
-        self.terrain_painter_app.brush_size = value
+        self.terrain_painter_app.brush_size = value / 100.0
+        self.terrain_painter_app.update_brush_size(value)
 
     def update_brush_intensity(self, value):
         intensity = value / 10.0
