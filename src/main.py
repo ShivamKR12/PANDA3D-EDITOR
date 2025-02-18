@@ -1118,7 +1118,7 @@ if __name__ == "__main__":
     pandaWidget1 = QPanda3DWidget(world)
     uiEditor_inst = ui_editor.Drag_and_drop_ui_editor(world, world.render2d)
     viewport_splitter1.addWidget(uiEditor_inst.tab_content(viewport_tab1, world))
-    
+    world.uiEditor = uiEditor_inst
     
     tab_widget.addTab(viewport_tab, "Shader Editor")
     tab_widget.currentChanged.connect(new_tab)

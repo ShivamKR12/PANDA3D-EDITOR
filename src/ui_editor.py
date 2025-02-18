@@ -28,8 +28,8 @@ class Drag_and_drop_ui_editor:
         self.mouse_ray = CollisionRay()
         self.mouse_node = CollisionNode('mouse_ray')
         self.mouse_node.add_solid(self.mouse_ray)
-        self.mouse_node.set_from_collide_mask(BitMask32.bit(1))
-        self.mouse_node.set_into_collide_mask(BitMask32.bit(1))
+        self.mouse_node.set_from_collide_mask(BitMask32.bit(5))
+        self.mouse_node.set_into_collide_mask(BitMask32.bit(5))
         self.mouse_node_path = self.world.camera.attach_new_node(self.mouse_node)
 
         self.collision_traverser.add_collider(self.mouse_node_path, self.collision_handler)
@@ -149,7 +149,7 @@ class Drag_and_drop_ui_editor:
         collisionNode.addSolid(polygon)
         
         # Set collision masks to match the ray's settings.
-        collisionNode.set_into_collide_mask(BitMask32.bit(1))
+        collisionNode.set_into_collide_mask(BitMask32.bit(5))
         
         # Attach collision node to the widget
         collisionNP = widget.attachNewNode(collisionNode)
@@ -211,8 +211,8 @@ class Drag_and_drop_ui_editor:
         ui_reference1.setPythonTag("isLabel", True)
         ui_reference1.setPythonTag("isButton", False)
         self.widgets.append(ui_reference1)
-        return ui_reference1
         #label1.set_python_tag("widget_type", "l")
+        return ui_reference1
         
         
         #self.attach_collision_to_widget(label1)
@@ -263,12 +263,12 @@ class Drag_and_drop_ui_editor:
         ui_reference1.setPythonTag("isLabel", False)
         ui_reference1.setPythonTag("isButton", True)
         self.widgets.append(ui_reference1)
-        return ui_reference1
         # Bind events for dragging (for both elements)
         #self.draggable_button.bind(DGG.B1PRESS, self.start_drag, extraArgs=[self.draggable_button, self.label1])
         #self.label1.bind(DGG.B1PRESS, self.start_drag, extraArgs=[self.draggable_button, self.label1])
         #self.draggable_button.bind(DGG.B1RELEASE, self.stop_drag)
         #self.label1.bind(DGG.B1RELEASE, self.stop_drag)
+        return ui_reference1
 
     def Frame(self, path, parent,frameSize=(-0.5, 0.5, -0.5, 0.5), scale=(0.1,0.1,0.1), pos=(0.0,0.0,0.5), frameColor=(0, 0, 0, 0)):
         ui_reference1 = DirectFrame(
@@ -365,7 +365,6 @@ class Drag_and_drop_ui_editor:
                     return True
         return False
     def drag_task(self, task):
-        
         if self.is_mouse_over_widget(self.world):
             print("test!!!!!")
             
@@ -405,8 +404,6 @@ class Drag_and_drop_ui_editor:
         self.mx, self.my = position['x'], position['y']
         self.is_moving = True
         self.world.add_task(self.drag_task, "on_mouse_click", appendTask=True)
-        self.world.add_task(self.world.animator_tab.drag_gizmo_task, "drag_task", appendTask=True)
-        
         self.height = 0.0
         self.holding = True
     

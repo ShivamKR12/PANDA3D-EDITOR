@@ -210,7 +210,7 @@ class TerrainPainterApp(DirectObject):
         self.gizmo_mask = BitMask32.bit(10)
         self.terrain_mask = BitMask32.bit(2)
         self.object_mask = BitMask32.bit(3)
-        self.ui_mask = BitMask32.bit(4)
+        self.ui_mask = BitMask32.bit(5)
         combimed_mask = self.gizmo_mask | self.terrain_mask | self.object_mask | self.ui_mask
         
         self.mouse_ray = CollisionRay()
@@ -261,7 +261,6 @@ class TerrainPainterApp(DirectObject):
         if hit_pos:
             self.terrain_np.set_shader_input("brush_pos", LVecBase4f(hit_pos.x, hit_pos.y, hit_pos.z, 1))
         else:
-            self.brush_visual.hide()
             self.terrain_np.set_shader_input("brush_pos", LVecBase4f(0, 0, 0, 0))
         self.terrain_np.set_shader_input("brush_size", self.brush_size)
 
@@ -288,12 +287,15 @@ class TerrainPainterApp(DirectObject):
         self.world.add_task(self.on_mouse_click, "on_mouse_click", appendTask=True)
         self.height = 0.0
         self.holding = True
+        self.world.uiEditor.start_holding(position)
 
     def stop_holding(self, position):
         self.holding = False
+        self.world.uiEditor.stop_drag(position)
 
     def mouse_move(self, evt: dict):
         self.mx, self.my = evt['x'], evt['y']
+        self.world.uiEditor.mouse_move(evt)
         
 
     def adjust_speed_of_brush(self, brush_image, speed_factor):
@@ -353,6 +355,7 @@ class TerrainPainterApp(DirectObject):
         self.collision_handler.clear_entries()
         self.collision_traverser.traverse(render)
 
+        
 
         if not self.height >= self.max_height:
             self.height += 0.02
