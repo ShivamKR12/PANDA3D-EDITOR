@@ -179,11 +179,13 @@ class TerrainPainterApp(DirectObject):
         self.terrain_node.heightfield = base.loader.loadTexture("./images/Heightmap.png")
         self.terrain_node.target_triangle_width = 10.0
         self.terrain_node.generate()
+        
 
         self.terrain_np = base.render.attach_new_node(self.terrain_node)
         self.terrain_np.set_scale(512, 512, 100)
         self.terrain_np.set_pos(-512 // 2, -512 // 2, -70.0)
 
+        self.terrain_np.set_python_tag("isTerrain", True)
 
         grass_tex = base.loader.loadTexture("./images/Grass.png")
         grass_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)

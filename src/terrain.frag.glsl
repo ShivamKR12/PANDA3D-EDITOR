@@ -51,7 +51,7 @@ void main() {
   // Fake fog
   float dist = (distance(vtx_pos, wspos_camera) / 2.0);
   float fog_factor = smoothstep(0, 1, dist / 1000.0);
-  shading = mix(shading, vec3(0.7, 0.7, 0.8), fog_factor);
+  shading = mix(shading, vec3(0.8078, 0.8078, 0.8078), fog_factor);
 
   vec4 terrainColor = vec4(shading, 1.0);
 
@@ -64,6 +64,7 @@ void main() {
 
   // Blend brush color with terrain color
 
-  color = mix(terrainColor, brushColor, brushColor.a * (1.0 - brush_dist));
+  float influence = smoothstep(0.0, 0.5, 0.5 - brush_dist);
+  color = mix(terrainColor, brushColor, influence * brushColor.a);
 
 }

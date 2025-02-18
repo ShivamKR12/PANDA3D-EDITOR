@@ -305,6 +305,11 @@ def on_item_clicked(item, column):
             if widget:
                 widget.setParent(None)
                 
+        if node.get_python_tag("isTerrain"):
+            control_widget.show()
+        else:
+            control_widget.hide()
+                
         
         
         test = gizmos.GizmoDemo(world)
