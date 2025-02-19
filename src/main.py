@@ -48,8 +48,7 @@ class PandaTest(Panda3DWorld):
         
         self.animator_tab = sequenceEditorTab.SequenceEditorTab(self)
         
-        gizmos.GizmoDemo(self)
-        
+        self.gizmos = gizmos.GizmoDemo(self)
         
         
         #self.raycasting.set_gizmos(self.animator_tab.gizmo_parent)
@@ -61,6 +60,8 @@ class PandaTest(Panda3DWorld):
         
         self.canvas.set_python_tag("isCanvas", True)
         self.canvas.set_python_tag("isLabel", False)
+        
+        self.canvas.setPythonTag("widget_type", "c")
         
         self.canvas.setPos(0, 0, 255)
         # Set up the orthographic camera
@@ -312,7 +313,7 @@ def on_item_clicked(item, column):
                 
         
         
-        test = gizmos.GizmoDemo(world)
+        world.gizmos.gizmo_root.set_pos(node.get_pos())
 
         
         inspector.recreate_property_box_for_node(node)
@@ -350,6 +351,8 @@ def on_item_clicked1(item, column):
             if widget:
                 widget.setParent(None)
                 
+        
+        world.gizmos.gizmo_root.set_pos(node.get_pos())
         
         uiEditor_inst.inspector_ui_tab.recreate_property_box_for_node(node)
 

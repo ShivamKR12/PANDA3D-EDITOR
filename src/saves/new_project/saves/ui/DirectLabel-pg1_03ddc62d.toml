@@ -1,0 +1,39 @@
+name = "DirectLabel-pg1"
+id = "03ddc62d"
+widget_type = "l"
+type = "script"
+isCanvas = false
+isLabel = true
+isButton = false
+
+[properties]
+widget_type = "l"
+specials_properties = [ "__UIEditorLabel__",]
+
+[transform.position]
+x = -0.699999988079071
+y = 0.0
+z = -0.699999988079071
+
+[transform.rotation]
+h = 0.0
+p = 0.0
+r = 0.0
+
+[transform.scale]
+x = 0.10000000149011612
+y = 0.10000000149011612
+z = 0.10000000149011612
+
+[coloring.frameColor1]
+r = 0.0
+g = 1.0
+b = 0.16470588235294117
+
+[coloring.text_fg1]
+r = 1
+g = 1
+b = 1
+
+[properties.specials.__UIEditorLabel__]
+text = "Label 1"

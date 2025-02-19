@@ -187,6 +187,113 @@ class Load:
         with open(input_folder, "r") as file:
             input_folder = file.read().strip()
 
+        # Sanitize the input_folder path
+        input_folder = input_folder.replace('\0', '')
+
+        # Debugging: Print the sanitized input_folder path
+        print(f"Sanitized input folder path: {input_folder}")
+
+        # Iterate over all TOML files in the input folder
+        for file_name in os.listdir(input_folder):
+            if file_name.endswith(".toml"):
+                file_path = os.path.join(os.path.relpath(input_folder), file_name)
+                with open(file_path, "r") as file:
+                    entity_data = toml.load(file)
+
+                # Extract data from the entity
+                name = entity_data.get("name", "Unnamed")
+                entity_id = entity_data.get("id", None)
+                model_path = entity_data.get("entity_model", "")
+                entity_type = entity_data.get("type", "")
+                widget_type = entity_data.get("widget_type", "")
+                action = entity_data.get("action", "")
+                properties = entity_data.get("properties", {})
+                specials = properties.get("specials", "")
+                __UIEditorLabel__ = specials.get("__UIEditorLabel__", "")
+                __UIEditorButton__ = specials.get("__UIEditorButton__", "")
+                
+                if __UIEditorLabel__ != "":
+                    text = __UIEditorLabel__.get("text", "")
+                
+                if __UIEditorButton__ != "":
+                    text = __UIEditorButton__.get("text", "")
+                    
+                coloring = entity_data.get("coloring", {})
+                frame_color = coloring.get("frameColor1", {"r": 0.5, "g": 0.5, "b": 0.5})
+                color = coloring.get("text_fg1", {"r": 1.0, "g": 1.0, "b": 1.0})
+                image = entity_data.get("image", "")
+                parent = entity_data.get("parent", "")
+
+                transform = entity_data.get("transform", {})
+                isCanvas = entity_data.get("isCanvas", False)
+                isLabel = entity_data.get("isLabel", False)
+                isButton = entity_data.get("isButton", False)
+                isImage = entity_data.get("isImage", False)
+                #TODO load UI object to ui editor
+
+                # Set transformation properties
+                position = transform.get("position", {"x": 0, "y": 0, "z": 0})
+                rotation = transform.get("rotation", {"h": 0, "p": 0, "r": 0})
+                scale = transform.get("scale", {"x": 0.1, "y": 0.1, "z": 0.1})
+                parent = properties.get("parent", self.world.render2d)
+                script_paths = properties.get("script_paths", "")
+                s_property = properties.get("script_properties", "")
+
+                if widget_type == "l":
+                    self.widget = self.world.recreate_widget(text, frame_color, color, scale, position, parent)
+                    self.widget.set_python_tag("widget_type", "l")
+                    
+                if widget_type == "b":
+                    self.widget = self.world.recreate_button(text, frame_color, color, scale, position, parent)
+                    self.widget.set_python_tag("widget_type", "b")
+                    
+                if widget_type == None:
+                    self.widget = NodePath("None")
+                    
+                # Set properties
+                for key, value in properties.items():
+                    self.widget.set_python_tag(key, value)
+                for s in script_paths:
+                    prop = {}
+
+                    for attr, value in s_property.items():
+                        prop[attr] = (value)
+                        print("iiii:", value)
+                    prop.clear()
+                # Append entity data to the list
+                entities.append({
+                    "name": name,
+                    "id": entity_id,
+                    "transform": transform,
+                    "properties": properties,
+                    "model": model_path
+                })
+
+                self.world.hierarchy_tree1.clear()
+                self.world.populate_hierarchy(self.world.hierarchy_tree1, self.world.render2d)
+                
+                print(f"Entity '{name}' with ID '{entity_id}' loaded.")
+
+        return entities
+
+    def load_ui_from_folder_toml(self, input_folder: str, root_node: NodePath):
+        """
+        Load entities from TOML files, reconstruct them in the scene graph, attach models, scripts, and build a list of entities.
+        Args:
+            input_folder (str): Folder where TOML files are stored.
+            root_node (NodePath): The root node to attach loaded entities to.
+        Returns:
+            list: A list of dictionaries containing all entity data.
+        """
+        if not os.path.exists(input_folder):
+            print(f"Input folder {input_folder} does not exist.")
+            return []
+
+        entities = []
+        
+        with open(input_folder, "r") as file:
+            input_folder = file.read().strip()
+
         # Iterate over all TOML files in the input folder
         for file_name in os.listdir(input_folder):
             if file_name.endswith(".toml"):

@@ -126,6 +126,8 @@ class ScriptInspector(QWidget):
         #script_box.setStyleSheet("QGroupBox { background-color: gray; border: 1px solid black; border-radius: 20px; }")
 
         script_layout = QVBoxLayout()
+        
+        script_box.setLayout(script_layout)
 
         # Horizontal layout for script label and image
         title_layout = QHBoxLayout()
@@ -181,6 +183,7 @@ class ScriptInspector(QWidget):
             isButton = False
             isImage = False
         if isCanvas:
+            print("it's canvas")
             def make_label():
                 ui_editor.Drag_and_drop_ui_editor.label(instance, text1="Label 1", parent1=w.render2d)
                 w.hierarchy_tree.clear()
@@ -448,8 +451,8 @@ class ScriptInspector(QWidget):
             data = node.get_python_tag("specials_properties") or {"__UIEditorButton__"}
             node.set_python_tag("specials_properties", data)
             node.set_python_tag("id", str(uuid.uuid4())[:8])
-     
-    
+
+        self.scroll_layout.addWidget(script_box)
 
     def set_script(self, path, node, prop=None):
         """

@@ -342,8 +342,8 @@ class Drag_and_drop_ui_editor:
                 scale = widget.getScale()
                 # Estimate width and height based on known base dimensions and widget scale.
                 # You may need to adjust these factors to match the actual visual size of your widget.
-                base_width = 0.5   # Base width for a scale of 1; adjust as needed
-                base_height = 0.5  # Base height for a scale of 1; adjust as needed
+                base_width = 2   # Base width for a scale of 1; adjust as needed
+                base_height = 1  # Base height for a scale of 1; adjust as needed
                 width = base_width * scale.x
                 height = base_height * scale.z  # assuming z-scale affects height in render2d
 
