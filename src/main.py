@@ -306,12 +306,19 @@ def on_item_clicked(item, column):
             if widget:
                 widget.setParent(None)
                 
+<<<<<<< Updated upstream
         if node.get_python_tag("isTerrain"):
             control_widget.show()
         else:
             control_widget.hide()
                 
         
+=======
+        if node.get_python_tag("isTerrain") == True:
+            control_widget.show()
+        else:
+            control_widget.hide()
+>>>>>>> Stashed changes
         
         world.gizmos.gizmo_root.set_pos(node.get_pos())
 
@@ -774,6 +781,7 @@ class MainWindow(QMainWindow):
 
         # Terrain control widget
         self.terrain_control_widget = TerrainControlWidget(terrain_painter_app)
+        terrain_painter_app.terrain_np.set_python_tag("isTerrain", True)
         main_layout.addWidget(self.terrain_control_widget)
 
         # Populate the hierarchy tree with example data
@@ -1066,6 +1074,7 @@ if __name__ == "__main__":
     
     right_panel.layout().addWidget(world.hierarchy_tree)
     terrain_painter_app = terrainEditor.TerrainPainterApp(world, pandaWidget)
+    terrain_painter_app.terrain_np.set_python_tag("isTerrain", True)
     control_widget = TerrainControlWidget(terrain_painter_app)
     right_panel.layout().addWidget(control_widget)
     # Create a QWidget to hold the grid layout

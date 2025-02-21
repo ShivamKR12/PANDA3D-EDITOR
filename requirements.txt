@@ -4,3 +4,5 @@ Pillow>=10.0
 PyQt5>=5.15
 toml>=0.10
 twisted>=22.10
+panda3d-complexpbr
+panda3d-gltf
