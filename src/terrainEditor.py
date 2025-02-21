@@ -435,6 +435,8 @@ class TerrainPainterApp(DirectObject):
         
         self.brush_size = size
         
+        
+        
     def update_brush_intensity(self, intesity):
         
         self.brush_intesity = intesity
