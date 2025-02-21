@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "panda3d-editor"
+version = "0.5"
+description = "The Panda3D Editor is a scene editor designed to facilitate the creation, visualization, and management of 3D environments for Panda3D-based applications. It provides an intuitive interface for editing scene objects, adjusting properties, and managing assets."
+authors = ["INTEREDGAMES"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+panda3d = "^1.10.15"
+pyqt5 = "^5.15.11"
+qpanda3d = "^0.2.10"
+pillow = "^11.1.0"
+twisted = "^24.11.0"
+toml = "^0.10.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
