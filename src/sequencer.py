@@ -44,12 +44,43 @@ class SequenceView(QGraphicsView):
         return super().mouseMoveEvent(event)
 
 
-class QInterval(QGraphicsItem):
-    def __init__(self):
-        super().__init__()
-        self.keys = []
-        self.type = None
-        self.other = {}
+class QInterval(QGraphicsRectItem):
+    def __init__(self, x=0, y=0, width=100, height=30, parent=None):
+        super().__init__(x, y, width, height, parent)
+        self.setBrush(QBrush(Qt.yellow))
+        self.setPen(QPen(Qt.black, 2))
+        self.setFlags(QGraphicsItem.ItemIsMovable | QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemSendsGeometryChanges)
+        self.setAcceptHoverEvents(True)
+        self.resizing = False
+        self.resize_margin = 8
+
+    def hoverMoveEvent(self, event):
+        # Change cursor if near right edge for resizing
+        if abs(event.pos().x() - self.rect().width()) < self.resize_margin:
+            self.setCursor(Qt.SizeHorCursor)
+        else:
+            self.setCursor(Qt.ArrowCursor)
+        super().hoverMoveEvent(event)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton and abs(event.pos().x() - self.rect().width()) < self.resize_margin:
+            self.resizing = True
+        else:
+            self.resizing = False
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self.resizing:
+            new_width = max(10, event.pos().x())
+            rect = self.rect()
+            rect.setWidth(new_width)
+            self.setRect(rect)
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self.resizing = False
+        super().mouseReleaseEvent(event)
 
 
 class QSequence(QGraphicsItem):
@@ -115,4 +146,10 @@ ellipse.setFlags(QGraphicsItem.ItemIsMovable | QGraphicsItem.ItemIsSelectable)
 view = SequenceView(scene)
 #view.mouseMoveEvent = mouseMoveEvent
 view.show()
+
+# Example usage: add an editable interval to the scene
+interval_item = QInterval(100, 60, 120, 30)
+scene.addItem(interval_item)
+interval_item.setZValue(2)
+
 app.exec_()
