@@ -45,6 +45,8 @@ class SequenceView(QGraphicsView):
 
 
 class QInterval(QGraphicsRectItem):
+    RESIZE_MARGIN = 8  # Margin in pixels for detecting resize action
+
     def __init__(self, x=0, y=0, width=100, height=30, parent=None):
         super().__init__(x, y, width, height, parent)
         self.setBrush(QBrush(Qt.yellow))
@@ -52,18 +54,17 @@ class QInterval(QGraphicsRectItem):
         self.setFlags(QGraphicsItem.ItemIsMovable | QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemSendsGeometryChanges)
         self.setAcceptHoverEvents(True)
         self.resizing = False
-        self.resize_margin = 8
 
     def hoverMoveEvent(self, event):
         # Change cursor if near right edge for resizing
-        if abs(event.pos().x() - self.rect().width()) < self.resize_margin:
+        if abs(event.pos().x() - self.rect().width()) < self.RESIZE_MARGIN:
             self.setCursor(Qt.SizeHorCursor)
         else:
             self.setCursor(Qt.ArrowCursor)
         super().hoverMoveEvent(event)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton and abs(event.pos().x() - self.rect().width()) < self.resize_margin:
+        if event.button() == Qt.LeftButton and abs(event.pos().x() - self.rect().width()) < self.RESIZE_MARGIN:
             self.resizing = True
         else:
             self.resizing = False
@@ -146,10 +147,5 @@ ellipse.setFlags(QGraphicsItem.ItemIsMovable | QGraphicsItem.ItemIsSelectable)
 view = SequenceView(scene)
 #view.mouseMoveEvent = mouseMoveEvent
 view.show()
-
-# Example usage: add an editable interval to the scene
-interval_item = QInterval(100, 60, 120, 30)
-scene.addItem(interval_item)
-interval_item.setZValue(2)
-
+# The following example usage has been moved to a separate demo file for clarity.
 app.exec_()
