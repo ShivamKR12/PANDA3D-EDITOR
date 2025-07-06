@@ -15,48 +15,21 @@ class MapLoader:
     def __init__(self, world):
         self.world = world
 
-    def extract_map(self, map_file, extract_to):
+    def load_level_folder(self, project_folder):
         """
-        Extracts the .map file (a ZIP archive) to a target directory.
-        Returns True on success, False otherwise.
+        Loads the project from a folder (not a .map file).
+        Expects the level data in <project_folder>/level/ and settings in <project_folder>/settings/.
         """
-        # Use an absolute, normalized path.
-        map_file = os.path.abspath(os.path.normpath(map_file))
-        if not os.path.exists(map_file):
-            print(f"❌ Map file not found: {map_file}")
+        level_dir = os.path.join(project_folder, "level")
+        settings_dir = os.path.join(project_folder, "settings")
+        if not os.path.exists(level_dir):
+            print(f"❌ Level folder not found: {level_dir}")
             return False
-
-        os.makedirs(extract_to, exist_ok=True)
-
-        try:
-            with zipfile.ZipFile(map_file, 'r') as zip_ref:
-                zip_ref.extractall(extract_to)
-            print(f"📂 Extracted map to {extract_to}")
-            return True
-        except Exception as e:
-            print(f"❌ Failed to extract .map file: {e}")
-            return False
-
-    def load_map(self, map_file):
-        """
-        Loads the project from a .map file.
-        Expects the map file to be stored in the project folder (e.g. ./saves/tttttt/tttttt.map).
-        Extracts the map into a folder with the same name (without the .map extension)
-        and then loads the scene from the TOML files within.
-        """
-        # Use absolute paths
-        map_file = os.path.abspath(os.path.normpath(map_file))
-        project_folder = os.path.dirname(map_file)
-        # For example, if map_file is .../saves/tttttt/tttttt.map, extract to .../saves/tttttt/tttttt
-        extract_dir = os.path.join(project_folder, os.path.basename(map_file).replace('.map', ''))
-
-        if self.extract_map(map_file, extract_dir):
-            print("✅ Map extraction successful, loading scene...")
-            loader_instance = Load(self.world)
-            loader_instance.load_project_from_folder_toml(extract_dir, self.world.render)
-            print("🎮 Scene loaded successfully!")
-        else:
-            print("❌ Failed to load map.")
+        loader_instance = Load(self.world)
+        loader_instance.load_project_from_folder_toml(level_dir, self.world.render)
+        print("🎮 Scene loaded successfully from folder!")
+        # Optionally, load settings here if needed
+        return True
 
 # ------------------------------------------------------------------------------
 # Load class: Reads TOML files from a folder and reconstructs scene objects.

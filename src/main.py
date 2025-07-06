@@ -306,19 +306,12 @@ def on_item_clicked(item, column):
             if widget:
                 widget.setParent(None)
                 
-<<<<<<< Updated upstream
         if node.get_python_tag("isTerrain"):
             control_widget.show()
         else:
             control_widget.hide()
                 
         
-=======
-        if node.get_python_tag("isTerrain") == True:
-            control_widget.show()
-        else:
-            control_widget.hide()
->>>>>>> Stashed changes
         
         world.gizmos.gizmo_root.set_pos(node.get_pos())
 
@@ -446,12 +439,10 @@ class StartupWindow(QWidget):
         self.setLayout(layout)
 
     def on_item_double_clicked(self, item):
-        """Handle double-click on project list item"""
         project_path = item.data(Qt.UserRole)
         self.load_projects(select=project_path)
 
     def update_button_state(self):
-        """Enables/disables Open Project button based on selection"""
         has_selection = bool(self.project_list.selectedItems())
         self.select_button.setEnabled(has_selection)
 
@@ -476,15 +467,14 @@ class StartupWindow(QWidget):
 
     def load_projects(self, select=None):
         """
-        Loads the selected project by reading its preferences.toml to get the main_map path,
-        then uses MapLoader to load the map.
+        Loads the selected project by reading its preferences.toml to get the project path,
+        then uses MapLoader to load the level from the folder.
         """
         global project_name, opened_map, world, appw
         if not select:
             selected_item = self.project_list.currentItem()
-            # Use the full project folder path stored in the item.
             project_path = selected_item.data(Qt.UserRole)
-            project_name = os.path.basename(project_path)  # Store full path for later use.
+            project_name = os.path.basename(project_path)
         else:
             selected_item = select
             project_path = select
@@ -492,31 +482,19 @@ class StartupWindow(QWidget):
         if not selected_item:
             QMessageBox.warning(self, "No Project Selected", "Please select a project to open.")
             return
-        
         print(f"Opening project: {project_path}")
-
-        # Read the preferences file (assumed to be at PROJECT_PATH/preferences.toml)
         pref_file = os.path.join(project_path, "preferences.toml")
         if not os.path.exists(pref_file):
             QMessageBox.warning(self, "Error", f"Preferences file not found in {project_path}")
             return
-
         with open(pref_file, "r") as pref:
             prefs = toml.load(pref)
-        map_path = prefs.get("main_map", None)
-        if not map_path:
-            QMessageBox.warning(self, "Error", "No main_map entry found in preferences.")
-            return
         appw.show()
-
-        # Ensure the map_path is absolute.
-        map_path = os.path.abspath(map_path)
-        print(f"Opening map file: {map_path}")
         self.hide()
         ml = entity_editor.MapLoader(world)
-        ml.load_map(map_path)
-        opened_map = os.path.basename(map_path)
-        QMessageBox.information(self, "Project Loaded", f"Project loaded from {map_path}")
+        ml.load_level_folder(project_path)
+        opened_map = project_name
+        QMessageBox.information(self, "Project Loaded", f"Project loaded from {project_path}")
 
     def create_project(self):
         """
@@ -530,314 +508,27 @@ class StartupWindow(QWidget):
             QMessageBox.warning(self, "Invalid Name", "Please enter a valid project name.")
             return
         base_dir = os.path.abspath(os.path.join(os.getcwd(), "saves"))
-        base1_dir = os.path.abspath(os.path.join(os.getcwd(), "toml_loader"))
         project_path = os.path.join(base_dir, project_name)
         if os.path.exists(project_path):
             QMessageBox.warning(self, "Project Exists", "A project with this name already exists.")
             return
         os.makedirs(project_path)
         print(f"📂 Created new project: {project_path}")
-        # Save scene data into a folder inside the project.
-        output_toml = os.path.join(base1_dir, project_name)  # e.g., ./saves/tttttt/tttttt
-        output_map = os.path.join(project_path, f"{project_name}.map")  # e.g., ./saves/tttttt/tttttt.map
+        # Save scene data into level/ and settings/ inside the project.
         saver = entity_editor.Save(world)
-        saver.save_scene_to_toml(world.render, output_toml)
-        saver.save_scene_to_map(output_toml, output_map)
-        # Save preferences indicating the map file location.
-        main_map = {"main_map": output_map}
+        saver.save_scene_to_level_folder(world.render, project_path)
+        # Save preferences (could be expanded as needed)
         with open(os.path.join(project_path, "preferences.toml"), "w") as pref:
-            pref.write(toml.dumps(main_map))
+            pref.write(toml.dumps({"project_name": project_name}))
         self.load_projects(select=project_path)
         QMessageBox.information(self, "Project Created", f"Project '{project_name}' created and initialized!")
 
-
-
     def launch_main_app(self, project_path):
-        """Launches the main application with the selected project."""
         print(f"Launching main application with project: {project_path}")
         global appw
         self.close()
         appw.show()
-        # Replace with your main application launch (e.g., main.py)
-        #os.system(f"python main.py {project_path}")
-
-class Save_ui(QInputDialog):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Second Window")
-        self.setGeometry(150, 150, 300, 200)
-        
-        # Layout for the second window
-        layout = QVBoxLayout()
-        
-        # Input field
-        self.input_field = QLineEdit(self)
-        self.input_field.setText("untitled.ui")
-        self.input_field.setPlaceholderText("untitled.ui")
-        layout.addWidget(self.input_field)
-        
-        # Button to process the input
-        self.submit_button = QPushButton("Save", self)
-        self.submit_button.clicked.connect(self.process_input)
-        layout.addWidget(self.submit_button)
-        
-        self.setLayout(layout)
-    
-    def process_input(self):
-        global world
-        global project_name
-        # Get the input text and display it in the label
-        user_input = self.input_field.text()
-        ent_editor = entity_editor.Save(world)
-        ent_editor.save_scene_ui_to_toml(world.render2d, project_name + "/saves/ui/", user_input)
-        
-class Save_map(QInputDialog):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Second Window")
-        self.setGeometry(150, 150, 300, 200)
-        
-        global project_name
-        
-        if project_name != None:
-        
-        
-            # Layout for the second window
-            layout = QVBoxLayout()
-
-            # Input field
-            self.input_field = QLineEdit(self)
-            self.input_field.setText("untitled.map")
-            self.input_field.setPlaceholderText("untitled.map")
-            layout.addWidget(self.input_field)
-
-            # Button to process the input
-            self.submit_button = QPushButton("Save", self)
-            self.submit_button.clicked.connect(self.process_input)
-            layout.addWidget(self.submit_button)
-
-            self.setLayout(layout)
-            
-        else:
-            pass
-    
-    def process_input(self):
-        global world
-        # Get the input text and display it in the label
-        user_input = self.input_field.text()
-        save_map(user_input)
-        
-
-class Load_ui(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Second Window")
-        self.setGeometry(150, 150, 300, 200)
-
-        self.mesh_select = QComboBox(self)
-        self.mesh_select.currentIndexChanged.connect(self.set_selected)
-        
-        matching_files = []
-        for root, _, files in os.walk("./"):#FIXME this will be the project folder
-            for file in files:
-                if file.endswith(".ui"):  # Check file extension
-                    matching_files.append(os.path.join(root, file))
-                    self.mesh_select.addItem(file)
-        
-        
-        
-        # Layout for the second window
-        layout = QVBoxLayout()
-
-        
-        # Button to process the input
-        self.submit_button = QPushButton("Load", self)
-        self.submit_button.clicked.connect(self.process_input)
-        layout.addWidget(self.submit_button)
-        
-        self.setLayout(layout)
-        
-    def set_selected(self):
-        self.selected_text = self.mesh_select.currentText()
-
-    
-    def process_input(self):
-        global world
-        # Get the input text and display it in the label
-        #user_input = self.input_field.text()
-        entity_editor.Load(world).load_ui_from_folder_toml(self.selected_text, world.render2d)
-        
-#Toolbar functions
-def new_project():
-    print("Open file triggered")
-    global sw
-    
-    sw.show()
-    appw.hide()
-
-opened_map = None
-def save_file():
-    global opened_map
-    #world.messenger.send("save")
-    save_map(os.path.basename(os.path.splitext(opened_map)[0]))
-    print("Save file triggered")
-
-
-save_ui_instance = None
-load_ui_instance = None
-
-def save_ui_func():
-    global save_ui_instance
-    save_ui_instance = Save_ui()
-    save_ui_instance.show()
-    
-def load_ui_func():
-    global load_ui_instance
-    load_ui_instance = Load_ui()
-    load_ui_instance.show()
-
-save_map_instance = None
-
-def save_map_func():
-    global save_map_instance
-    save_map_instance = Save_map()
-    save_map_instance.show()
-
-import toml
-
-def load_project(world):
-    global sw
-    
-    sw.show()
-    appw.hide()
-
-    # Iterate through entities
-
-
-    
-    
-def close(): #TODO when saving is introduced make a window pop up with save option(save don't save and don't exist(canel))
-    """closing the editor"""
-    exit()
-
-input_settings = None
-net_settings = None
-def show_input_manager():
-    global input_settings
-    input_settings = input_manager.InputSettingsWindow(input_manager_c)
-    input_settings.show()
-
-def show_net_manager():
-    global net_settings
-    net_settings = input_manager.NetworkSettingsWindow()
-    net_settings.show()
-    
-from multiprocessing import Process
-
-# Top-level function for multiprocessing
-def run_game_preview(network_manager):
-    app = Preview_build.GamePreviewApp(network_manager)
-    app.run()
-
-def play_mode():
-    """Launch game preview in a separate process as a client"""
-    server_ip = "127.0.0.1"
-    server_port = 9000
-
-    # Ensure the game process uses the client NetworkManager
-    from multiprocessing import get_context
-    ctx = get_context('spawn')
-    game_process = ctx.Process(
-        target=run_game_preview,
-        args=(server_ip, server_port)
-    )
-    game_process.start()
-
-def run_game_preview(server_ip, server_port):
-    """Target function for the game preview process (client)"""
-    network_manager = NetworkManager(
-        server_address=(server_ip, server_port),
-        is_client=True  # Force client mode
-    )
-    network_manager.connect_to_server()
-    app = Preview_build.GamePreviewApp(network_manager)
-    app.run()
-
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Panda3D Editor")
-
-        # Main widget and layout
-        main_widget = QWidget()
-        self.setCentralWidget(main_widget)
-        main_layout = QVBoxLayout(main_widget)
-
-        # Hierarchy tree widget
-        self.hierarchy_tree = QTreeWidget()
-        self.hierarchy_tree.setHeaderLabel("Hierarchy")
-        self.hierarchy_tree.itemClicked.connect(self.on_item_clicked)
-        main_layout.addWidget(self.hierarchy_tree)
-
-        # Terrain control widget
-        self.terrain_control_widget = TerrainControlWidget(terrain_painter_app)
-        terrain_painter_app.terrain_np.set_python_tag("isTerrain", True)
-        main_layout.addWidget(self.terrain_control_widget)
-
-        # Populate the hierarchy tree with example data
-        self.populate_hierarchy_tree()
-
-    def populate_hierarchy_tree(self):
-        # Example data for the hierarchy tree
-        root_item = QTreeWidgetItem(self.hierarchy_tree, ["Root"])
-        child_item = QTreeWidgetItem(root_item, ["Child"])
-        root_item.setExpanded(True)
-
-        # Store NodePath in the item for demonstration purposes
-        root_node = NodePath("Root")
-        child_node = root_node.attachNewNode("Child")
-        root_item.setData(0, Qt.UserRole, root_node)
-        child_item.setData(0, Qt.UserRole, child_node)
-
-    def on_item_clicked(self, item, column):
-        node = item.data(0, Qt.UserRole)  # Retrieve the NodePath stored in the item
-
-        if node:
-            world.selected_node = node
-            # Update input boxes with node's properties
-            input_boxes[(0, 0)].setText(str(node.getX()))
-            input_boxes[(0, 1)].setText(str(node.getY()))
-            input_boxes[(0, 2)].setText(str(node.getZ()))
-            input_boxes[(1, 0)].setText(str(node.getH()))
-            input_boxes[(1, 1)].setText(str(node.getP()))
-            input_boxes[(1, 2)].setText(str(node.getR()))
-            input_boxes[(2, 0)].setText(str(node.getScale().x))
-            input_boxes[(2, 1)].setText(str(node.getScale().y))
-            input_boxes[(2, 2)].setText(str(node.getScale().z()))
-
-#-------------------
-#Terrain Generation
-terrain_generate = None
-
-
-def gen_terrain():
-    global world
-    global terrain_generate
-    world.make_terrain()
-
-
-#-------------------
-
-sw = None
-
-def startup_w():
-    global sw
-    sw = StartupWindow()
-    sw.show()
-
-
-
-
+# ...existing code continues after StartupWindow...
 def save_map(map_name):
     global world, project_name
     
