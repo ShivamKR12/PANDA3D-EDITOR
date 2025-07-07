@@ -9,6 +9,7 @@ import importlib
 import uuid
 from script_loader import load_script
 import ui_editor
+from property_grid import PropertyGrid
 
 class ScriptInspector(QWidget):
     def __init__(self, world, entity_editor, node, parent=None, ):
@@ -123,10 +124,7 @@ class ScriptInspector(QWidget):
         
         
         script_box = QGroupBox()
-        #script_box.setStyleSheet("QGroupBox { background-color: gray; border: 1px solid black; border-radius: 20px; }")
-
         script_layout = QVBoxLayout()
-        
         script_box.setLayout(script_layout)
 
         # Horizontal layout for script label and image
@@ -451,6 +449,43 @@ class ScriptInspector(QWidget):
             data = node.get_python_tag("specials_properties") or {"__UIEditorButton__"}
             node.set_python_tag("specials_properties", data)
             node.set_python_tag("id", str(uuid.uuid4())[:8])
+
+        # Example: add PropertyGrid for transform properties
+        if hasattr(node, 'get_pos') and hasattr(node, 'get_hpr') and hasattr(node, 'get_scale'):
+            pos = node.get_pos() if callable(node.get_pos) else [0,0,0]
+            hpr = node.get_hpr() if callable(node.get_hpr) else [0,0,0]
+            scale = node.get_scale() if callable(node.get_scale) else [1,1,1]
+            properties = [
+                {'label': 'Position X', 'name': 'position.x', 'type': float, 'value': pos[0]},
+                {'label': 'Position Y', 'name': 'position.y', 'type': float, 'value': pos[1]},
+                {'label': 'Position Z', 'name': 'position.z', 'type': float, 'value': pos[2]},
+                {'label': 'Rotation X', 'name': 'rotation.x', 'type': float, 'value': hpr[0]},
+                {'label': 'Rotation Y', 'name': 'rotation.y', 'type': float, 'value': hpr[1]},
+                {'label': 'Rotation Z', 'name': 'rotation.z', 'type': float, 'value': hpr[2]},
+                {'label': 'Scale X', 'name': 'scale.x', 'type': float, 'value': scale[0]},
+                {'label': 'Scale Y', 'name': 'scale.y', 'type': float, 'value': scale[1]},
+                {'label': 'Scale Z', 'name': 'scale.z', 'type': float, 'value': scale[2]},
+            ]
+            grid = PropertyGrid(properties)
+            def on_grid_change(name, value):
+                # Update node transform based on property name
+                if name.startswith('position.'):
+                    idx = {'x':0,'y':1,'z':2}[name[-1]]
+                    p = list(node.get_pos())
+                    p[idx] = value
+                    node.set_pos(*p)
+                elif name.startswith('rotation.'):
+                    idx = {'x':0,'y':1,'z':2}[name[-1]]
+                    h = list(node.get_hpr())
+                    h[idx] = value
+                    node.set_hpr(*h)
+                elif name.startswith('scale.'):
+                    idx = {'x':0,'y':1,'z':2}[name[-1]]
+                    s = list(node.get_scale())
+                    s[idx] = value
+                    node.set_scale(*s)
+            grid.propertyChanged.connect(on_grid_change)
+            script_layout.addWidget(grid)
 
         self.scroll_layout.addWidget(script_box)
 
