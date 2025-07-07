@@ -35,6 +35,7 @@ import raycasting
 import Preview_build
 from terrain_control_widget import TerrainControlWidget
 import gizmos
+from node_property_model import NodePropertyModel, NodePropertyEditor
 
 class PandaTest(Panda3DWorld):
     def __init__(self, width=1024, height=768, script_inspector=None):
@@ -306,19 +307,11 @@ def on_item_clicked(item, column):
             if widget:
                 widget.setParent(None)
                 
-<<<<<<< Updated upstream
         if node.get_python_tag("isTerrain"):
             control_widget.show()
         else:
             control_widget.hide()
                 
-        
-=======
-        if node.get_python_tag("isTerrain") == True:
-            control_widget.show()
-        else:
-            control_widget.hide()
->>>>>>> Stashed changes
         
         world.gizmos.gizmo_root.set_pos(node.get_pos())
 
